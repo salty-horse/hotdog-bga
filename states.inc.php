@@ -54,16 +54,17 @@ if (!defined('STATE_END_GAME')) {
 
 define('STATE_NEW_HAND', 2);
 define('STATE_PICK_TOPPINGS', 3);
-define('STATE_PICK_SMOTHER_OR_RELISH', 3);
-define('STATE_NEXT_SELECTOR', 4);
-define('STATE_GIFT_CARD', 5);
-define('STATE_FIRST_TRICK', 6);
-define('STATE_NEW_TRICK', 7);
-define('STATE_PLAYER_TURN_TRY_AUTOPLAY', 12);
-define('STATE_PLAYER_TURN', 8);
-define('STATE_NEXT_PLAYER', 9);
-define('STATE_REVEAL_STRAWMEN', 10);
-define('STATE_END_HAND', 11);
+define('STATE_PASS_TOPPINGS', 4);
+define('STATE_ADD_RELISH', 5);
+define('STATE_ADD_RELISH_OR_SMOTHER', 6);
+define('STATE_FIRST_TRICK', 7);
+define('STATE_CHOOSE_WORKS_DIRECTION', 8);
+define('STATE_NEW_TRICK', 9);
+define('STATE_PLAYER_TURN_TRY_AUTOPLAY', 10);
+define('STATE_PLAYER_TURN', 11);
+define('STATE_NEXT_PLAYER', 12);
+define('STATE_REVEAL_STRAWMEN', 13);
+define('STATE_END_HAND', 14);
 define('STATE_END_GAME', 99);
 }
 
@@ -89,37 +90,48 @@ $machinestates = [
     ],
 
     STATE_PICK_TOPPINGS => [
-        'name' => 'selectTrump',
+        'name' => 'pickToppings',
         'description' => clienttranslate('${actplayer} must pick toppings, or pass'),
         'descriptionmyturn' => clienttranslate('${you} must pick toppings, or pass'),
         'type' => 'activeplayer',
         'possibleactions' => ['pickToppings'],
-        'args' => 'argSelectTrump',
         'transitions' => [
-            'selectOtherTrump' => STATE_NEXT_SELECTOR,
-            'giftCard' => STATE_GIFT_CARD,
+            'addRelish' => STATE_ADD_RELISH,
+            'addRelishSmother' => STATE_ADD_RELISH_OR_SMOTHER,
+            'pass' => STATE_PASS_TOPPINGS,
         ]
     ],
 
-    STATE_NEXT_SELECTOR => [
-        'name' => 'nextSelector',
+    STATE_ADD_RELISH => [
+        'name' => 'addRelish',
+        'description' => clienttranslate('${actplayer} may add relish'),
+        'descriptionmyturn' => clienttranslate('${you} may add relish'),
+        'type' => 'activeplayer',
+        'possibleactions' => ['addRelish'],
+        'transitions' => [
+            'addRelish' => STATE_FIRST_TRICK,
+        ]
+    ],
+
+    STATE_ADD_RELISH_OR_SMOTHER => [
+        'name' => 'addRelishOrSmother',
+        'description' => clienttranslate('${actplayer} may add relish or smother'),
+        'descriptionmyturn' => clienttranslate('${you} may add relish or smother'),
+        'type' => 'activeplayer',
+        'possibleactions' => ['addRelish', 'smother'],
+        'transitions' => [
+            'addRelish' => STATE_FIRST_TRICK,
+            'smother' => STATE_ADD_RELISH,
+        ]
+    ],
+
+    STATE_PASS_TOPPINGS => [
+        'name' => 'passToppings',
         'description' => '',
         'type' => 'game',
-        'action' => 'stMakeNextPlayerActive',
         'transitions' => [
-            '' => STATE_SELECT_TRUMP,
-        ]
-    ],
-
-    STATE_GIFT_CARD => [
-        'name' => 'giftCard',
-        'description' => clienttranslate('Your opponent must gift a card'),
-        'descriptionmyturn' => clienttranslate('${you} must select a card to gift'),
-        'type' => 'multipleactiveplayer',
-        'action' => 'stMakeEveryoneActive',
-        'possibleactions' => ['giftCard'],
-        'transitions' => [
-            '' => STATE_FIRST_TRICK,
+            'pickToppings' => STATE_PICK_TOPPINGS,
+            'addRelish' => STATE_ADD_RELISH, // Both passed
         ]
     ],
 
@@ -128,7 +140,21 @@ $machinestates = [
         'description' => '',
         'type' => 'game',
         'action' => 'stFirstTrick',
-        'transitions' => ['' => STATE_NEW_TRICK]
+        'transitions' => [
+            'chooseWorksDirection' => STATE_CHOOSE_WORKS_DIRECTION,
+            'new_trick' => STATE_NEW_TRICK,
+        ]
+    ],
+
+    STATE_CHOOSE_WORKS_DIRECTION => [
+        'name' => 'chooseWorksDirection',
+        'description' => clienttranslate('${actplayer} must choose initial card ranking for The Works'),
+        'descriptionmyturn' => clienttranslate('${you} must choose initial card ranking for The Works'),
+        'type' => 'activeplayer',
+        'possibleactions' => ['chooseWorksDirection'],
+        'transitions' => [
+            '' => STATE_FIRST_TRICK,
+        ]
     ],
 
     STATE_NEW_TRICK => [

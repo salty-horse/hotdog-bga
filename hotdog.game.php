@@ -36,7 +36,7 @@ class Hotdog extends Table {
             'trumpRank' => 11,
             'trumpSuit' => 12,
             'ledSuit' => 13,
-            'firstPlayer' => 14,
+            'firstPlayer' => 14, // Non-dealer in game terms
             'firstPicker' => 15,
             'firstPickerPassed' => 16,
             'secondPickerPassed' => 17,
@@ -555,6 +555,7 @@ class Hotdog extends Table {
                 "WHERE player_id = $player_id");
         }
 
+		// TODO: Choose works direction
 
         $this->gamestate->nextState();
     }

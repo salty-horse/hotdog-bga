@@ -35,6 +35,22 @@ class action_hotdog extends APP_GameAction {
 
     public function pickToppings() {
         self::setAjaxMode();
+        $topping = self::getArg('topping', AT_enum, true, null, ['ketchup', 'mustard', 'the_works', 'pass']);
+        $trump_suit = self::getArg('suit', AT_posint, false);
+        if (in_array($topping, ['ketchup', 'mustard'])) {
+            if (!$trump_suit or $trump_suit > 4) {
+                throw new BgaUserException(self::_('Invalid trump suit'));
+            }
+        } else if ($trump_suit) {
+            throw new BgaUserException(self::_('Invalid trump suit'));
+        }
+
+        $this->game->selectTrump($trump_type, $trump_id);
+        self::ajaxResponse();
+    }
+
+    public function addRelish() {
+        self::setAjaxMode();
         $topping = self::getArg( 'trump_type', AT_enum, true, null, ['ketchup', 'mustard', 'the_works', 'pass']);
         $trump_suit = self::getArg('id', AT_posint, false);
         if (in_array($trump_type, ['ketchup', 'mustard'])) {
@@ -46,13 +62,6 @@ class action_hotdog extends APP_GameAction {
         }
 
         $this->game->selectTrump($trump_type, $trump_id);
-        self::ajaxResponse();
-    }
-
-    public function giftCard() {
-        self::setAjaxMode();
-        $card_id = self::getArg('id', AT_posint, true);
-        $this->game->giftCard($card_id);
         self::ajaxResponse();
     }
 
