@@ -47,6 +47,10 @@
     display: none;
 }
 
+#hd_bidding_box button {
+    width: auto;
+}
+
 #hd_centerarea {
     display: none; /* Usually flex */
     align-items: center;
@@ -80,16 +84,22 @@
     align-items: center
 }
 
-#hd_rankSelector {
-    display: none;
+.hd_selector {
+    display: flex;
 }
-
-#hd_suitSelector {
-    display: none;
-}
-
-#hd_suitSelector li {
+.hd_selector > div {
     background-size: 70%;
+    padding: 8px;
+    outline: 1px solid black;
+    outline-offset: -2px;
+    height: 32px;
+    width: 32px;
+    font-size: 40px;
+    text-align: center;
+    line-height: 32px;
+    gap: 0px 10px;
+    user-select: none;
+    cursor: pointer;
 }
 
 .hd_trump_indicator {

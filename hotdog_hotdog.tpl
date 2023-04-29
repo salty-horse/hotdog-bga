@@ -26,7 +26,11 @@
     </div>
 </div>
 
-<div id="hd_bidding_box" class="whiteblock"></div>
+<div id="hd_bidding_box" class="whiteblock">
+<h1>{BIDDING_PHASE}</h1>
+<div id="hd_bidding_history"></div>
+<div id="hd_bidding_current"></div>
+</div>
 
 <div id="hd_centerarea">
 
@@ -84,11 +88,21 @@ var jstpl_player_hand_size = '<div class="hd_hand_size">\
     <span id="hd_player_hand_size_${id}">0</span>\
     <span class="fa fa-hand-paper-o"/>\
 </div>';
-var jstpl_suit_selector = '<ul id="vid_suitSelector">\
-    <li data-type="suit" class="hd_suit_icon_1" data-mode='${game_mode}' data-id="1"></li>\
-    <li data-type="suit" class="hd_suit_icon_2" data-mode='${game_mode}' data-id="2"></li>\
-    <li data-type="suit" class="hd_suit_icon_3" data-mode='${game_mode}' data-id="3"></li>\
-    <li data-type="suit" class="hd_suit_icon_4" data-mode='${game_mode}' data-id="4"></li></ul>';
+var jstpl_suit_selector = '<div class="hd_selector">\
+    <div data-type="suit" class="hd_suit_icon_1" data-mode="${game_mode}" data-id="1"></div>\
+    <div data-type="suit" class="hd_suit_icon_2" data-mode="${game_mode}" data-id="2"></div>\
+    <div data-type="suit" class="hd_suit_icon_3" data-mode="${game_mode}" data-id="3"></div>\
+    <div data-type="suit" class="hd_suit_icon_4" data-mode="${game_mode}" data-id="4"></div></div>';
+var jstpl_rank_selector = '<div class="hd_selector">\
+    <div data-id="1">1</div>\
+    <div data-id="2">2</div>\
+    <div data-id="3">3</div>\
+    <div data-id="4">4</div>\
+    <div data-id="5">5</div>\
+    <div data-id="6">6</div>\
+    <div data-id="7">7</div>\
+    <div data-id="8">8</div>\
+    <div data-id="9">9</div></div>';
 
 </script>
 

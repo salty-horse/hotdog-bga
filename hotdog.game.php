@@ -165,7 +165,7 @@ class Hotdog extends Table {
             $strawmen = $this->getPlayerStrawmen($player_id);
             $player['visible_strawmen'] = $strawmen['visible'];
             $player['more_strawmen'] = $strawmen['more'];
-            $player['won_tricks'] = $score_piles[$player_id]['won_tricks'];
+            $player['won_tricks'] = $won_tricks[$player_id];
             $player['hand_size'] = $this->deck->countCardInLocation('hand', $player_id);
         }
 
@@ -186,9 +186,10 @@ class Hotdog extends Table {
         if ($this->gamestate->state()['name'] == 'gameEnd') {
             return 100;
         }
-        $target_points = $this->getGameStateValue('targetPoints');
-        $max_score = intval(self::getUniqueValueFromDB('SELECT MAX(player_score) FROM player'));
-        return min(100, floor($max_score / $target_points * 100));
+        return 0; // TODO
+        // $target_points = $this->getGameStateValue('targetPoints');
+        // $max_score = intval(self::getUniqueValueFromDB('SELECT MAX(player_score) FROM player'));
+        // return min(100, floor($max_score / $target_points * 100));
     }
 
     //////////////////////////////////////////////////////////////////////////////
@@ -317,8 +318,7 @@ class Hotdog extends Table {
     }
 
     function getWonTricks() {
-        $players = self::getCollectionFromDb('SELECT player_id, won_tricks FROM player', true);
-        return $players;
+        return self::getCollectionFromDb('SELECT player_id, won_tricks FROM player', true);
     }
 
     const SUIT_SYMBOLS = ['♠', '♥', '♣', '♦'];
@@ -360,7 +360,6 @@ class Hotdog extends Table {
             } else {
                 // Opponent can pick toppings
                 self::setGameStateValue('firstPickerPassed', 1);
-                $this->activeNextPlayer();
                 self::setGameStateValue('currentPicker', self::getActivePlayerId());
                 $this->gamestate->nextState('pickToppings');
                 self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker'), [
@@ -389,18 +388,17 @@ class Hotdog extends Table {
                 self::setGameStateInitialValue('rankDirection', -1);
             }
             self::setGameStateValue('trumpSuit', $trump_suit);
-            self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode} with ${suit} as trump'), [
+            self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode_display} with ${suit} as trump'), [
                 'i18n' => ['game_mode_display'],
                 'player_id' => $player_id,
                 'player_name' => $players[$player_id]['player_name'],
-                'suit' => $this->getSuitLogName($trump_id),
-                'suit_id' => $trump_id,
+                'suit' => $this->getSuitLogName($trump_suit),
+                'suit_id' => $trump_suit,
                 'game_mode' => $topping,
                 'game_mode_display' => $this->gameModes[$topping],
             ]);
         }
 
-        $this->activeNextPlayer();
         if (self::getGameStateValue('firstPickerPassed')) {
             $this->gamestate->nextState('addRelish');
         } else {
@@ -705,7 +703,7 @@ class Hotdog extends Table {
 
         // Check if this is the end of the game
         $end_of_game = false;
-        $target_points = $this->getGameStateValue('targetPoints');
+        $target_points = 5;
         if (($flat_scores[0] >= $target_points || $flat_scores[1] >= $target_points) && $flat_scores[0] != $flat_scores[1]) {
             $end_of_game = true;
         }

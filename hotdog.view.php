@@ -62,6 +62,7 @@ class view_hotdog_hotdog extends game_view {
             }
         }
         
+        $this->tpl['BIDDING_PHASE'] = self::_('Bidding phase');
         $this->tpl['MY_HAND'] = self::_('My hand');
         $this->tpl['MY_STRAWMEN'] = self::_('My plate');
         $this->tpl['TRUMP_SUIT'] = self::_('Trump suit');

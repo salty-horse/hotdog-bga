@@ -62,6 +62,12 @@ function (dojo, declare) {
                 4: _('diamonds'),
             };
 
+            this.gameModes = {
+                'ketchup': _('Ketchup'),
+                'mustard': _('Mustard'),
+                'the_works': _('The Works'),
+            };
+
             // Set dynamic UI strings
             if (this.isSpectator) {
                 for (const player_info of Object.values(this.gamedatas.players)) {
@@ -168,41 +174,56 @@ function (dojo, declare) {
         {
             console.log('Entering state:', stateName);
 
+            let bidding_box;
             switch (stateName) {
             case 'pickToppings':
+                bidding_box = document.getElementById('hd_bidding_current');
+                document.getElementById('hd_bidding_box').style.display = 'block';
                 if (this.isCurrentPlayerActive()) {
-                    let bidding_box = document.getElementById('hd_bidding_box');
-                    bidding_box.style.display = 'block';
-                    let bid_step_elem = dojo.create('div', null, bidding_box);
-                    let ketchup_elem = dojo.create('div', null, bid_step_elem);
-                    dojo.place('<h1>Ketchup</h1>', ketchup_elem); // TODO translate
-                    ketchup_selector = this.format_block('jstpl_suit_selector', {'game_mode': 'ketchup'});
-                    dojo.place(ketchup_selector, ketchup_elem);
-                    ketchup_selector.querySelectorAll('li').forEach((node, index, arr) => {
+                    let ketchup_elem = dojo.create('div', null, bidding_box);
+                    dojo.place('<h2>Ketchup</h2>', ketchup_elem); // TODO translate
+                    let ketchup_selector = dojo.place(this.format_block('jstpl_suit_selector', {'game_mode': 'ketchup'}), ketchup_elem);
+                    ketchup_selector.querySelectorAll('div').forEach((node, index, arr) => {
                         dojo.connect(node, 'onclick', this, 'onPickingToppings');
                     });
+                    let mustard_elem = dojo.create('div', null, bidding_box);
+                    dojo.place('<h2>Mustard</h2>', mustard_elem); // TODO translate
+                    let mustard_selector = dojo.place(this.format_block('jstpl_suit_selector', {'game_mode': 'mustard'}), mustard_elem);
+                    mustard_selector.querySelectorAll('div').forEach((node, index, arr) => {
+                        dojo.connect(node, 'onclick', this, 'onPickingToppings');
+                    });
+                    let the_works_elem = dojo.create('div', null, bidding_box);
+                    let button = dojo.create('button', {innerHTML: 'The Works', class: 'bgabutton bgabutton_blue'}, the_works_elem); // TODO translate
+                    button.onclick = () => { this.ajaxAction('pickToppings', {topping: 'the_works'})};
+                    let pass_elem = dojo.create('div', null, bidding_box);
+                    button = dojo.create('button', {innerHTML: 'Pass', class: 'bgabutton bgabutton_blue'}, pass_elem); // TODO translate
+                    button.onclick = () => { this.ajaxAction('pickToppings', {topping: 'pass'})};
+                } else {
+                    bidding_box.innerHTML = '';
+                }
+                break;
 
+            case 'addRelish':
+            case 'addRelishOrSmother':
+                document.getElementById('hd_bidding_box').style.display = 'block';
+                bidding_box = document.getElementById('hd_bidding_current');
+                if (this.isCurrentPlayerActive()) {
+                    let elem = dojo.create('div', null, bidding_box);
+                    dojo.place('<h2>Special Rank</h2>', elem); // TODO translate
+                    let rank_selector = dojo.place(this.format_block('jstpl_rank_selector'), elem);
+                    rank_selector.querySelectorAll('div').forEach((node, index, arr) => {
+                        dojo.connect(node, 'onclick', this, 'onPickingSpecialRank');
+                    });
+                    let button = dojo.create('button', {innerHTML: 'No special rank', class: 'bgabutton bgabutton_blue'}, elem); // TODO translate
+                    button.onclick = () => { this.ajaxAction('addRelish', {option: 'pass'})};
+                    let pass_elem = dojo.create('div', null, bidding_box);
 
-
-            let newElem = dojo.place(this.format_block('jstpl_strawman', {
-                x: spriteCoords.x,
-                y: spriteCoords.y,
-                player_id: player_id,
-                straw_num: straw_num,
-            }), elem);
-
-
-                    document.getElementById('hd_rankSelector').style.display = (this.gamedatas.trumpRank == '0') ? 'inline-block' : 'none';
-                    document.getElementById('hd_suitSelector').style.display = (this.gamedatas.trumpSuit == '0') ? 'inline-block' : 'none';
-                    let elem = document.getElementById('hd_trump_rank');
-                    if (elem.textContent == '?') {
-                        elem.textContent = '';
+                    if (stateName == 'addRelishOrSmother') {
+                        button = dojo.create('button', {innerHTML: 'Smother', class: 'bgabutton bgabutton_blue'}, elem); // TODO translate
+                        button.onclick = () => { this.ajaxAction('addRelish', {option: 'smother'})};
                     }
-                    elem = document.getElementById('hd_trump_suit');
-                    if (elem.textContent == '?') {
-                        elem.textContent = '';
-                        elem.removeAttribute('title');
-                    }
+                } else {
+                    bidding_box.innerHTML = '';
                 }
                 break;
 
@@ -312,6 +333,9 @@ function (dojo, declare) {
 
         getSuitDiv: function (suit_symbol) {
             let suit_id = this.suitSymbolToId[suit_symbol];
+            if (!suit_id) {
+                suit_id = suit_symbol;
+            }
             let suit_name = this.suitNames[suit_id];
             return `<div role=\"img\" title=\"${suit_name}\" aria-label=\"${suit_name}\" class=\"hd_log_suit hd_suit_icon_${suit_id}\"></div>`;
         },
@@ -437,10 +461,14 @@ function (dojo, declare) {
                 e => e.classList.remove('hd_playable'));
         },
 
+        getPlayerNameHTML: function(player_info) {
+            return `<span style="color:#${player_info.color}">${player_info.name}</span>`;
+        },
+
         setStrawmanPlayerLabel: function(player_info) {
             document.querySelector(`#hd_player_${player_info.id}_strawmen_wrap > h3`).innerHTML = dojo.string.substitute(
                 _("${player_name}'s plate"),
-                {player_name: `<span style="color:#${player_info.color}">${player_info.name}</span>`});
+                {player_name: this.getPlayerNameHTML(player_info)});
         },
 
         // Change the graphics of the trump cards and reorder player hand
@@ -533,7 +561,17 @@ function (dojo, declare) {
             this.ajaxAction('pickToppings', {
                 topping: data.mode,
                 suit: data.id,
-                lock : true
+            });
+        },
+
+        onPickingSpecialRank: function(event) {
+            if (!this.checkAction('addRelish') && !this.checkAction('addRelishOrSmother') )
+                return;
+
+            let data = event.currentTarget.dataset;
+            this.ajaxAction('addRelish', {
+                option: 'relish',
+                id: data.id,
             });
         },
 
@@ -554,10 +592,7 @@ function (dojo, declare) {
 
             dojo.subscribe('newHand', this, 'notif_newHand');
             dojo.subscribe('newHandPublic', this, 'notif_newHandPublic');
-            dojo.subscribe('selectTrumpRank', this, 'notif_selectTrumpRank');
-            dojo.subscribe('selectTrumpSuit', this, 'notif_selectTrumpSuit');
-            dojo.subscribe('giftCardPrivate', this, 'notif_giftCardPrivate');
-            dojo.subscribe('giftCard', this, 'notif_giftCard');
+            dojo.subscribe('selectGameMode', this, 'notif_selectGameMode');
             dojo.subscribe('playCard', this, 'notif_playCard');
             this.notifqueue.setSynchronous('playCard', 1000);
             dojo.subscribe('revealStrawmen', this, 'notif_revealStrawmen');
@@ -607,50 +642,45 @@ function (dojo, declare) {
             this.initPlayerHand(notif.args.hand_cards);
         },
 
-        notif_selectTrumpRank: function(notif) {
-            this.gamedatas.trumpRank = notif.args.rank;
-            let elem = document.getElementById('hd_trump_rank');
-            elem.textContent = notif.args.rank;
-            elem.style.display = 'block';
-            document.getElementById('hd_rankSelector').style.display = 'none';
+        notif_selectGameMode: function(notif) {
+            let game_mode = notif.args.game_mode;
 
-            elem = document.getElementById('hd_trump_suit');
-            if (elem.style.display == 'none') {
-                elem.textContent = '?';
-                elem.removeAttribute('title');
-                elem.style.display = 'block';
+            let bidding_history = document.getElementById('hd_bidding_history');
+            let div = dojo.create('div', null, bidding_history);
+            if (this.isCurrentPlayerActive()) {
+                if (!game_mode) {
+                    div.innerHTML = _('You passed on being the Picker');
+                } else if (game_mode == 'the_works') {
+                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {game_mode: this.gameModes[game_mode]});
+                } else {
+                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode} with ${suit} as trump'), {
+                        game_mode: this.gameModes[game_mode],
+                        suit: this.getSuitDiv(notif.args.suit_id),
+                    });
+                }
+            } else {
+                let player_html = this.getPlayerNameHTML(this.gamedatas.players[notif.args.player_id]);
+                if (!game_mode) {
+                    div.innerHTML = dojo.string.substitute(_('${player_name} passed on being the Picker'), {player_name: player_html});
+                } else if (game_mode == 'the_works') {
+                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {
+                        game_mode: this.gameModes[game_mode],
+                        player_name: player_html,
+                    });
+                } else {
+                    div.innerHTML = dojo.string.substitute(_('${player_name} selected ${game_mode} with ${suit} as trump'), {
+                        game_mode: this.gameModes[game_mode],
+                        suit: this.getSuitDiv(notif.args.suit_id),
+                        player_name: player_html,
+                    });
+                }
             }
 
-            this.markTrumps();
-        },
-
-        notif_selectTrumpSuit: function(notif) {
-            this.gamedatas.trumpSuit = notif.args.suit_id;
-            let elem = document.getElementById('hd_trump_suit');
-            elem.style.display = 'block';
-            elem.textContent = '';
-            elem.className = `hd_trump_indicator hd_suit_icon_${this.gamedatas.trumpSuit}`;
-            elem.title = elem['aria-label'] = this.suitNames[this.gamedatas.trumpSuit];
-            document.getElementById('hd_suitSelector').style.display = 'none';
-
-            elem = document.getElementById('hd_trump_rank');
-            if (elem.style.display == 'none') {
-                elem.style.display = 'block';
+            dojo.create('hr', null, bidding_history);
+            if (game_mode == 'ketchup' || game_mode == 'mustard') {
+                this.gamedatas.trumpSuit = notif.args.suit_id;
+                this.markTrumps();
             }
-
-            this.markTrumps();
-        },
-
-        notif_giftCardPrivate: function(notif) {
-            this.unmarkPlayableCards();
-
-            this.playerHand.removeFromStockById(notif.args.card);
-
-            // Hand size is decreased in notif_giftCard
-        },
-
-        notif_giftCard: function(notif) {
-            this.handSizes[notif.args.player_id].incValue(-1);
         },
 
         notif_playCard: function(notif) {
