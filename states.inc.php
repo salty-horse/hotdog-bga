@@ -141,7 +141,7 @@ $machinestates = [
         'type' => 'activeplayer',
         'possibleactions' => ['addRelish'],
         'transitions' => [
-            'addRelish' => STATE_FIRST_TRICK,
+            'firstTrick' => STATE_FIRST_TRICK,
         ]
     ],
 
@@ -152,8 +152,8 @@ $machinestates = [
         'type' => 'activeplayer',
         'possibleactions' => ['addRelish'],
         'transitions' => [
-            'addRelish' => STATE_FIRST_TRICK,
-            'smother' => STATE_ADD_RELISH,
+            'firstTrick' => STATE_FIRST_TRICK,
+            'addRelish' => STATE_NEXT_PLAYER_ADD_RELISH,
         ]
     ],
 

@@ -154,6 +154,8 @@ class Hotdog extends Table {
         $result['currentPicker'] = $this->getGameStateValue('currentPicker');
         $result['trumpSuit'] = $this->getGameStateValue('trumpSuit');
         $result['specialRank'] = $this->getGameStateValue('specialRank');
+        $result['gameMode'] = $this->getGameStateValue('gameMode');
+        $result['rankDirection'] = $this->getGameStateValue('rankDirection');
 
         $won_tricks = $this->getWonTricks();
 
@@ -356,15 +358,18 @@ class Hotdog extends Table {
                     'player_name' => $players[$player_id]['player_name'],
                     'game_mode' => 'the_works',
                     'game_mode_display' => $this->gameModes['the_works'],
+                    'new_picker' => 0,
                 ]);
             } else {
                 // Opponent can pick toppings
+                $other_player = self::getPlayerAfter($player_id);
                 self::setGameStateValue('firstPickerPassed', 1);
-                self::setGameStateValue('currentPicker', self::getActivePlayerId());
+                self::setGameStateValue('currentPicker', $other_player);
                 $this->gamestate->nextState('pickToppings');
                 self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker'), [
                     'player_id' => $player_id,
                     'player_name' => $players[$player_id]['player_name'],
+                    'new_picker' => $other_player,
                 ]);
             }
             return;
@@ -399,10 +404,51 @@ class Hotdog extends Table {
             ]);
         }
 
-        if (self::getGameStateValue('firstPickerPassed')) {
+        if ($topping == 'the_works') {
             $this->gamestate->nextState('addRelish');
         } else {
             $this->gamestate->nextState('addRelishOrSmother');
+        }
+    }
+
+    function addRelish($option, $special_rank) {
+        $player_id = self::getActivePlayerId();
+        $this->addRelishForPlayer($option, $special_rank);
+    }
+
+    function addRelishForPlayer($option, $special_rank, $player_id) {
+        self::checkAction('addRelish');
+
+        $players = self::loadPlayersBasicInfos();
+
+        if ($option == 'pass') {
+            $this->gamestate->nextState('firstTrick');
+            self::notifyAllPlayers('addRelish', clienttranslate('${player_name} decided not adding relish'), [
+                'player_id' => $player_id,
+                'player_name' => $players[$player_id]['player_name'],
+                'option' => 'pass',
+            ]);
+            $this->gamestate->nextState('firstTrick');
+        } else if ($option == 'smother') {
+            if (self::getGameStateValue('gameMode') == 3) {
+                throw new BgaUserException(self::_('You cannot smother The Works'));
+            }
+            self::setGameStateValue('gameMode', 3);
+            self::setGameStateValue('currentPicker', $player_id);
+            self::notifyAllPlayers('addRelish', clienttranslate('${player_name} smothers and becomes the Picker'), [
+                'player_id' => $player_id,
+                'player_name' => $players[$player_id]['player_name'],
+                'option' => 'smother',
+            ]);
+            $this->gamestate->nextState('addRelish');
+        } else {
+            self::setGameStateValue('specialRank', $special_rank);
+            self::notifyAllPlayers('addRelish', clienttranslate('${player_name} adds ${rank} as relish'), [
+                'player_id' => $player_id,
+                'player_name' => $players[$player_id]['player_name'],
+                'rank' => $special_rank,
+            ]);
+            $this->gamestate->nextState('firstTrick');
         }
     }
 
@@ -680,7 +726,6 @@ class Hotdog extends Table {
             $sql = "UPDATE player SET player_score=player_score+$points  WHERE player_id='$player_id'";
             self::DbQuery($sql);
             self::notifyAllPlayers('endHand', clienttranslate('${player_name} scores ${points} points (was gifted ${gift_value} ${suit})'), [
-                'i18n' => ['gift_suit_name'],
                 'player_id' => $player_id,
                 'player_name' => $players[$player_id]['player_name'],
                 'points' => $points,

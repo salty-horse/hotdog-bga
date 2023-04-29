@@ -593,6 +593,7 @@ function (dojo, declare) {
             dojo.subscribe('newHand', this, 'notif_newHand');
             dojo.subscribe('newHandPublic', this, 'notif_newHandPublic');
             dojo.subscribe('selectGameMode', this, 'notif_selectGameMode');
+            dojo.subscribe('addRelish', this, 'notif_addRelish');
             dojo.subscribe('playCard', this, 'notif_playCard');
             this.notifqueue.setSynchronous('playCard', 1000);
             dojo.subscribe('revealStrawmen', this, 'notif_revealStrawmen');
@@ -644,9 +645,71 @@ function (dojo, declare) {
 
         notif_selectGameMode: function(notif) {
             let game_mode = notif.args.game_mode;
+            let new_picker = notif.args.new_picker;
+
+            if (new_picker || new_picker == 0) {
+                this.gamedatas.newPicker = new_picker;
+            }
 
             let bidding_history = document.getElementById('hd_bidding_history');
             let div = dojo.create('div', null, bidding_history);
+            let player_html = this.getPlayerNameHTML(this.gamedatas.players[notif.args.player_id]);
+            if (!game_mode) {
+                if (new_picker == 0) {
+                    this.gamedatas.gameMode = 3;
+                    div.innerHTML = dojo.string.substitute(_('Both players passed on being the Picker. Playing with {$game_mode}', {
+                        game_mode: this.gameModes['the_works'],
+                    }));
+                } else {
+                    if (this.isCurrentPlayerActive()) {
+                        div.innerHTML = _('You passed on being the Picker');
+                    } else {
+                        div.innerHTML = dojo.string.substitute(_('${player_name} passed on being the Picker'), {player_name: player_html});
+                    }
+                }
+            } else if (game_mode == 'the_works') {
+                this.gamedatas.gameMode = 3;
+                if (this.isCurrentPlayerActive()) {
+                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {game_mode: this.gameModes[game_mode]});
+                } else {
+                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {
+                        game_mode: this.gameModes[game_mode],
+                        player_name: player_html,
+                    });
+                }
+            } else {
+                if (this.isCurrentPlayerActive()) {
+                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode} with ${suit} as trump'), {
+                        game_mode: this.gameModes[game_mode],
+                        suit: this.getSuitDiv(notif.args.suit_id),
+                    });
+                } else {
+                    div.innerHTML = dojo.string.substitute(_('${player_name} selected ${game_mode} with ${suit} as trump'), {
+                        game_mode: this.gameModes[game_mode],
+                        suit: this.getSuitDiv(notif.args.suit_id),
+                        player_name: player_html,
+                    });
+                }
+            }
+
+            dojo.create('hr', null, bidding_history);
+            if (game_mode == 'ketchup' || game_mode == 'mustard') {
+                this.gamedatas.gameMode = (game_mode == 'ketchup') ? 1 : 2;
+                this.gamedatas.trumpSuit = notif.args.suit_id;
+                this.markTrumps();
+            }
+        },
+
+        notif_addRelish: function(notif) {
+            let option = notif.args.option;
+
+            let bidding_history = document.getElementById('hd_bidding_history');
+            let div = dojo.create('div', null, bidding_history);
+            if (option == 'pass') {
+            } else if (option == 'smother') {
+            } else {
+            }
+
             if (this.isCurrentPlayerActive()) {
                 if (!game_mode) {
                     div.innerHTML = _('You passed on being the Picker');
