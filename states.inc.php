@@ -54,17 +54,16 @@ if (!defined('STATE_END_GAME')) {
 
 define('STATE_NEW_HAND', 2);
 define('STATE_PICK_TOPPINGS', 3);
-define('STATE_PASS_TOPPINGS', 4);
-define('STATE_ADD_RELISH', 5);
-define('STATE_ADD_RELISH_OR_SMOTHER', 6);
-define('STATE_FIRST_TRICK', 7);
-define('STATE_CHOOSE_WORKS_DIRECTION', 8);
-define('STATE_NEW_TRICK', 9);
-define('STATE_PLAYER_TURN_TRY_AUTOPLAY', 10);
-define('STATE_PLAYER_TURN', 11);
-define('STATE_NEXT_PLAYER', 12);
-define('STATE_REVEAL_STRAWMEN', 13);
-define('STATE_END_HAND', 14);
+define('STATE_ADD_RELISH', 4);
+define('STATE_ADD_RELISH_OR_SMOTHER', 5);
+define('STATE_FIRST_TRICK', 6);
+define('STATE_CHOOSE_WORKS_DIRECTION', 7);
+define('STATE_NEW_TRICK', 8);
+define('STATE_PLAYER_TURN_TRY_AUTOPLAY', 9);
+define('STATE_PLAYER_TURN', 10);
+define('STATE_NEXT_PLAYER', 11);
+define('STATE_REVEAL_STRAWMEN', 12);
+define('STATE_END_HAND', 13);
 define('STATE_END_GAME', 99);
 }
 
@@ -97,8 +96,8 @@ $machinestates = [
         'possibleactions' => ['pickToppings'],
         'transitions' => [
             'addRelish' => STATE_ADD_RELISH,
-            'addRelishSmother' => STATE_ADD_RELISH_OR_SMOTHER,
-            'pass' => STATE_PASS_TOPPINGS,
+            'addRelishOrSmother' => STATE_ADD_RELISH_OR_SMOTHER,
+            'pickToppings' => STATE_PICK_TOPPINGS,
         ]
     ],
 
@@ -118,20 +117,10 @@ $machinestates = [
         'description' => clienttranslate('${actplayer} may add relish or smother'),
         'descriptionmyturn' => clienttranslate('${you} may add relish or smother'),
         'type' => 'activeplayer',
-        'possibleactions' => ['addRelish', 'smother'],
+        'possibleactions' => ['addRelish'],
         'transitions' => [
             'addRelish' => STATE_FIRST_TRICK,
             'smother' => STATE_ADD_RELISH,
-        ]
-    ],
-
-    STATE_PASS_TOPPINGS => [
-        'name' => 'passToppings',
-        'description' => '',
-        'type' => 'game',
-        'transitions' => [
-            'pickToppings' => STATE_PICK_TOPPINGS,
-            'addRelish' => STATE_ADD_RELISH, // Both passed
         ]
     ],
 

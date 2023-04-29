@@ -43,8 +43,12 @@
 /********* You can start writing your CSS below this line: **********/
 /** Table layout **/
 
+#hd_bidding_box {
+    display: none;
+}
+
 #hd_centerarea {
-    display: flex;
+    display: none; /* Usually flex */
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
@@ -65,41 +69,15 @@
     outline-offset: -2px;
 }
 
-#hd_trumpSelector {
+#hd_gameInfo {
     min-height: 130px;
     display: inline-block;
     vertical-align: middle;
 }
 
-#hd_trumpSelector > div {
+#hd_gameInfo > div {
     display: flex;
     align-items: center
-}
-
-#hd_trumpSelector > div > div {
-    height: 1em;
-    padding-top: 1em;
-    padding-bottom: 1em;
-}
-
-#hd_trumpSelector ul {
-    list-style-type: none;
-    overflow: hidden;
-}
-
-#hd_trumpSelector li {
-    float: left;
-    padding: 8px;
-    outline: 1px solid black;
-    outline-offset: -2px;
-    height: 32px;
-    width: 32px;
-    font-size: 40px;
-    text-align: center;
-    line-height: 32px;
-    margin-right: 10px;
-    user-select: none;
-    cursor: pointer;
 }
 
 #hd_rankSelector {

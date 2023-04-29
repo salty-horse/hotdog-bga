@@ -33,18 +33,26 @@ class Hotdog extends Table {
         parent::__construct();
         self::initGameStateLabels([
             'roundNumber' => 10,
-            'trumpRank' => 11,
-            'trumpSuit' => 12,
+            'trumpSuit' => 11,
+            'specialRank' => 12,
             'ledSuit' => 13,
-            'firstPlayer' => 14, // Non-dealer in game terms
-            'firstPicker' => 15,
-            'firstPickerPassed' => 16,
-            'secondPickerPassed' => 17,
-            'targetPoints' => 100,
+            'gameMode' => 14,
+            'rankDirection' => 15,
+            'firstPlayer' => 16, // Non-dealer in game terms
+            'currentPicker' => 17,
+            'firstPickerPassed' => 18,
+            'secondPickerPassed' => 19,
+            'footlongVariant' => 100,
         ]);
 
         $this->deck = self::getNew('module.common.deck');
         $this->deck->init('card');
+
+        $this->gameModes = [
+            'ketchup' => clienttranslate('Ketchup'),
+            'mustard' => clienttranslate('Mustard'),
+            'the_works' => clienttranslate('The Works'),
+        ];
     }
 
     protected function getGameName()
@@ -89,11 +97,11 @@ class Hotdog extends Table {
 
         // Init global values with their initial values
 
-        self::setGameStateInitialValue('trumpRank', 0);
         self::setGameStateInitialValue('trumpSuit', 0);
-
-        // Init game statistics
-        // (note: statistics are defined in your stats.inc.php file)
+        self::setGameStateInitialValue('specialRank', 0);
+        self::setGameStateInitialValue('firstPickerPassed', 0);
+        self::setGameStateInitialValue('secondPickerPassed', 0);
+        self::setGameStateInitialValue('rankDirection', 0);
 
         // Create cards
         $cards = [];
@@ -105,20 +113,12 @@ class Hotdog extends Table {
 
         $this->deck->createCards($cards, 'deck');
 
-        // Activate first player (which is in general a good idea :))
+        // Activate first player
         $this->activeNextPlayer();
 
         $player_id = self::getActivePlayerId();
         self::setGameStateInitialValue('firstPlayer', $player_id);
-        self::setGameStateInitialValue('firstPicker', $player_id);
-
-        // Game statistics
-        if ($this->getGameStateValue('targetPoints') == 300) {
-            $this->initStat('table', 'number_of_rounds_standard_game', 0);
-        } else {
-            $this->initStat('table', 'number_of_rounds_long_game', 0);
-        }
-
+        self::setGameStateInitialValue('currentPicker', $player_id);
 
         /************ End of the game initialization *****/
     }
@@ -151,11 +151,11 @@ class Hotdog extends Table {
 
         $result['roundNumber'] = $this->getGameStateValue('roundNumber');
         $result['firstPlayer'] = $this->getGameStateValue('firstPlayer');
-        $result['firstPicker'] = $this->getGameStateValue('firstPicker');
-        $result['trumpRank'] = $this->getGameStateValue('trumpRank');
+        $result['currentPicker'] = $this->getGameStateValue('currentPicker');
         $result['trumpSuit'] = $this->getGameStateValue('trumpSuit');
+        $result['specialRank'] = $this->getGameStateValue('specialRank');
 
-        $score_piles = $this->getScorePiles();
+        $won_tricks = $this->getWonTricks();
 
         foreach ($result['players'] as &$player) {
             $player_id = $player['id'];
@@ -166,7 +166,6 @@ class Hotdog extends Table {
             $player['visible_strawmen'] = $strawmen['visible'];
             $player['more_strawmen'] = $strawmen['more'];
             $player['won_tricks'] = $score_piles[$player_id]['won_tricks'];
-            $player['score_pile'] = $score_piles[$player_id]['points'];
             $player['hand_size'] = $this->deck->countCardInLocation('hand', $player_id);
         }
 
@@ -277,7 +276,7 @@ class Hotdog extends Table {
 
         // If this is a followed card, make sure it's in the led suit or a trump suit/rank.
         // If not, make sure the player has no cards of the led suit.
-        $trump_rank = $this->getGameStateValue('trumpRank');
+        $trump_rank = $this->getGameStateValue('specialRank');
         $trump_suit = $this->getGameStateValue('trumpSuit');
 
         $cards_of_led_suit = [];
@@ -317,27 +316,9 @@ class Hotdog extends Table {
         return null;
     }
 
-    function getScorePiles() {
-        $players = self::loadPlayersBasicInfos();
-        $result = [];
-        $pile_size_by_player = [];
-        foreach ($players as $player_id => $player) {
-            $result[$player_id] = ['points' => 0];
-            $pile_size_by_player[$player_id] = 0;
-        }
-
-        $cards = $this->deck->getCardsInLocation('scorepile');
-        foreach ($cards as $card) {
-            $player_id = $card['location_arg'];
-            $result[$player_id]['points'] += $card['type_arg'];
-            $pile_size_by_player[$player_id] += 1;
-        }
-
-        foreach ($players as $player_id => $player) {
-            $result[$player_id]['won_tricks'] = $pile_size_by_player[$player_id] / 2;
-        }
-
-        return $result;
+    function getWonTricks() {
+        $players = self::getCollectionFromDb('SELECT player_id, won_tricks FROM player', true);
+        return $players;
     }
 
     const SUIT_SYMBOLS = ['♠', '♥', '♣', '♦'];
@@ -352,65 +333,79 @@ class Hotdog extends Table {
      * Each time a player is doing some game action, one of the methods below is called.
      * (note: each method below must match an input method in template.action.php)
      */
-    function selectTrump($trump_type, $trump_id) {
+    function pickToppings($topping, $trump_suit) {
         $player_id = self::getActivePlayerId();
-        $this->selectTrumpForPlayer($trump_type, $trump_id, $player_id);
+        $this->pickToppingsForPlayer($topping, $trump_suit, $player_id);
     }
 
-    function selectTrumpForPlayer($trump_type, $trump_id, $player_id) {
-        self::checkAction('selectTrump');
-        $trump_rank = $this->getGameStateValue('trumpRank');
-        $trump_suit = $this->getGameStateValue('trumpSuit');
-
-        // Make sure this trump type is not already set
-        if ($trump_rank && $trump_type == 'rank' || $trump_suit && $trump_type == 'suit') {
-            throw new BgaUserException(self::_('You cannot choose this trump type'));
-        }
+    function pickToppingsForPlayer($topping, $trump_suit, $player_id) {
+        self::checkAction('pickToppings');
 
         $players = self::loadPlayersBasicInfos();
-        if ($trump_type == 'rank') {
-            $trump_rank = $trump_id;
-            self::setGameStateValue('trumpRank', $trump_id);
-            self::notifyAllPlayers('selectTrumpRank', clienttranslate('${player_name} selects ${rank} as the trump rank'), [
+
+        if ($topping == 'pass') {
+            if (self::getGameStateValue('firstPickerPassed')) {
+                // Both players have passed. Play with The Works.
+                self::setGameStateValue('secondPickerPassed', 1);
+                self::setGameStateValue('gameMode', 3);
+                self::setGameStateValue('currentPicker', 0);
+                $this->gamestate->nextState('firstTrick');
+                self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker. Playing with ${game_mode}'), [
+                    'i18n' => ['game_mode_display'],
+                    'player_id' => $player_id,
+                    'player_name' => $players[$player_id]['player_name'],
+                    'game_mode' => 'the_works',
+                    'game_mode_display' => $this->gameModes['the_works'],
+                ]);
+            } else {
+                // Opponent can pick toppings
+                self::setGameStateValue('firstPickerPassed', 1);
+                $this->activeNextPlayer();
+                self::setGameStateValue('currentPicker', self::getActivePlayerId());
+                $this->gamestate->nextState('pickToppings');
+                self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker'), [
+                    'player_id' => $player_id,
+                    'player_name' => $players[$player_id]['player_name'],
+                ]);
+            }
+            return;
+        }
+        
+        if ($topping == 'the_works') {
+            self::setGameStateValue('gameMode', 3);
+            self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode}'), [
+                'i18n' => ['game_mode_display'],
                 'player_id' => $player_id,
                 'player_name' => $players[$player_id]['player_name'],
-                'rank' => $this->values_label[$trump_id],
+                'game_mode' => $topping,
+                'game_mode_display' => $this->gameModes[$topping],
             ]);
         } else {
-            $trump_suit = $trump_id;
-            self::setGameStateValue('trumpSuit', $trump_id);
-            self::notifyAllPlayers('selectTrumpSuit', clienttranslate('${player_name} selects ${suit} as the trump suit'), [
+            if ($topping == 'ketchup') {
+                self::setGameStateValue('gameMode', 1);
+                self::setGameStateInitialValue('rankDirection', 1);
+            } else {
+                self::setGameStateValue('gameMode', 2);
+                self::setGameStateInitialValue('rankDirection', -1);
+            }
+            self::setGameStateValue('trumpSuit', $trump_suit);
+            self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode} with ${suit} as trump'), [
+                'i18n' => ['game_mode_display'],
                 'player_id' => $player_id,
                 'player_name' => $players[$player_id]['player_name'],
                 'suit' => $this->getSuitLogName($trump_id),
                 'suit_id' => $trump_id,
+                'game_mode' => $topping,
+                'game_mode_display' => $this->gameModes[$topping],
             ]);
         }
 
-        if ($trump_rank && $trump_suit) {
-            $this->gamestate->nextState('giftCard');
+        $this->activeNextPlayer();
+        if (self::getGameStateValue('firstPickerPassed')) {
+            $this->gamestate->nextState('addRelish');
         } else {
-            $this->gamestate->nextState('selectOtherTrump');
+            $this->gamestate->nextState('addRelishOrSmother');
         }
-    }
-
-    function giftCard($card_id) {
-        $player_id = self::getCurrentPlayerId();
-        $this->giftCardFromPlayer($card_id, $player_id);
-    }
-
-    function giftCardFromPlayer($card_id, $player_id) {
-        self::checkAction('giftCard');
-        $cards_in_hand = $this->deck->getPlayerHand($player_id);
-        if (!in_array($card_id, array_keys($cards_in_hand))) {
-            throw new BgaUserException(self::_('You do not have this card'));
-        }
-        $this->deck->moveCard($card_id, 'gift', self::getPlayerAfter($player_id));
-        self::notifyPlayer($player_id, 'giftCardPrivate', '', ['card' => $card_id]);
-        self::notifyAllPlayers('giftCard', clienttranslate('${player_name} selected a card to gift'), [
-            'player_id' => $player_id,
-            'player_name' => self::getPlayerNameById($player_id) ]);
-        $this->gamestate->setPlayerNonMultiactive($player_id, '');
     }
 
     function playCard($card_id) {
@@ -483,8 +478,8 @@ class Hotdog extends Table {
      */
     function stNewHand() {
         $this->incGameStateValue('roundNumber', 1);
-        self::setGameStateValue('trumpRank', 0);
         self::setGameStateValue('trumpSuit', 0);
+        self::setGameStateValue('specialRank', 0);
 
         // Shuffle deck
         $this->deck->moveAllCardsInLocation(null, 'deck');
@@ -529,7 +524,7 @@ class Hotdog extends Table {
 
         // Update hand statistics
         $trump_suit = $this->getGameStateValue('trumpSuit');
-        $trump_rank = $this->getGameStateValue('trumpRank');
+        $trump_rank = $this->getGameStateValue('specialRank');
         $players = self::loadPlayersBasicInfos();
         foreach ($players as $player_id => $player) {
             // Count all player cards that match the trump suit or trump rank
@@ -578,8 +573,8 @@ class Hotdog extends Table {
         $cards_on_table = array_values($this->deck->getCardsInLocation('cardsontable'));
         $winning_player = null;
         $led_suit = self::getGameStateValue('ledSuit');
-        $trump_rank = $this->getGameStateValue('trumpRank');
         $trump_suit = $this->getGameStateValue('trumpSuit');
+        $trump_rank = $this->getGameStateValue('specialRank');
 
         // Trump rank is involved
         if ($cards_on_table[0]['type_arg'] == $trump_rank || $cards_on_table[1]['type_arg'] == $trump_rank) {
@@ -675,7 +670,7 @@ class Hotdog extends Table {
         // Count and score points, then end the game or go to the next hand.
         $players = self::loadPlayersBasicInfos();
 
-        $score_piles = $this->getScorePiles();
+        $score_piles = $this->getWonTricks();
 
         $gift_cards_by_player = self::getCollectionFromDB('select card_location_arg id, card_type type, card_type_arg type_arg from card where card_location = "gift"');
 
@@ -819,7 +814,7 @@ class Hotdog extends Table {
         // Choose new first picker
         if ($flat_scores[0] == $flat_scores[1]) {
             // Rare case when players are tied: Alternate first picker
-            $first_picker = self::getPlayerAfter(self::getGameStateValue('firstPicker'));
+            $first_picker = self::getPlayerAfter(self::getGameStateValue('currentPicker'));
         } else {
             // First picker is the player with the lower score
             if ($flat_scores[0] < $flat_scores[1]) {
@@ -830,7 +825,7 @@ class Hotdog extends Table {
             $first_picker = $player_with_lowest_score;
         }
 
-        self::setGameStateValue('firstPicker', $first_picker);
+        self::setGameStateValue('currentPicker', $first_picker);
         $this->gamestate->changeActivePlayer($first_picker);
         $this->gamestate->nextState('nextHand');
     }
@@ -854,8 +849,8 @@ class Hotdog extends Table {
 
         if ($state_name == 'selectTrump') {
             // Select a random trump
-            $trump_rank = $this->getGameStateValue('trumpRank');
             $trump_suit = $this->getGameStateValue('trumpSuit');
+            $trump_rank = $this->getGameStateValue('specialRank');
 
             if ($trump_rank) {
                 $this->selectTrumpForPlayer('suit', bga_rand(1, 4), $active_player);

@@ -41,27 +41,30 @@ class action_hotdog extends APP_GameAction {
             if (!$trump_suit or $trump_suit > 4) {
                 throw new BgaUserException(self::_('Invalid trump suit'));
             }
-        } else if ($trump_suit) {
-            throw new BgaUserException(self::_('Invalid trump suit'));
         }
 
-        $this->game->selectTrump($trump_type, $trump_id);
+        $this->game->pickToppings($topping, $trump_suit);
         self::ajaxResponse();
     }
 
     public function addRelish() {
         self::setAjaxMode();
-        $topping = self::getArg( 'trump_type', AT_enum, true, null, ['ketchup', 'mustard', 'the_works', 'pass']);
-        $trump_suit = self::getArg('id', AT_posint, false);
-        if (in_array($trump_type, ['ketchup', 'mustard'])) {
-            if (!$trump_id or $trump_id > 10) {
+        $option = self::getArg('option', AT_enum, true, null, ['relish', 'pass', 'smother']);
+        $special_rank = self::getArg('id', AT_posint, false);
+        if ($option == 'relish') {
+            if (!$special_rank or $special_rank > 9) {
                 throw new BgaUserException(self::_('Invalid trump value'));
             }
-        } else if ($trump_id) {
-            throw new BgaUserException(self::_('Invalid trump value'));
         }
 
-        $this->game->selectTrump($trump_type, $trump_id);
+        $this->game->addRelish($option, $special_rank);
+        self::ajaxResponse();
+    }
+
+    public function chooseWorksDirection() {
+        self::setAjaxMode();
+        $option = self::getArg('option', AT_enum, true, null, ['ketchup', 'mustard']);
+        $this->game->chooseWorksDirection($option);
         self::ajaxResponse();
     }
 

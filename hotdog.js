@@ -79,10 +79,6 @@ function (dojo, declare) {
 
             dojo.connect(this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged');
 
-            dojo.query('#hd_trumpSelector li').forEach((node, index, arr) => {
-                dojo.connect(node, 'onclick', this, 'onChoosingTrump');
-            });
-
             // Create cards types
             for (let suit = 1; suit <= 4; suit++) {
                 for (let rank = 1; rank <= 9; rank++) {
@@ -108,7 +104,7 @@ function (dojo, declare) {
                 // Score piles
                 let score_pile_counter = new ebg.counter();
                 this.scorePiles[player_id] = score_pile_counter;
-                score_pile_counter.create(`score_pile_${player_id}`);
+                score_pile_counter.create(`hd_score_pile_${player_id}`);
                 score_pile_counter.setValue(player_info.score_pile);
 
                 // Hand size counter
@@ -116,7 +112,7 @@ function (dojo, declare) {
                     document.getElementById(`player_board_${player_id}`));
                 let hand_size_counter = new ebg.counter();
                 this.handSizes[player_id] = hand_size_counter;
-                hand_size_counter.create(`player_hand_size_${player_id}`);
+                hand_size_counter.create(`hd_player_hand_size_${player_id}`);
                 hand_size_counter.setValue(player_info.hand_size);
 
                 // Strawmen
@@ -173,9 +169,29 @@ function (dojo, declare) {
             console.log('Entering state:', stateName);
 
             switch (stateName) {
-            case 'selectTrump':
+            case 'pickToppings':
                 if (this.isCurrentPlayerActive()) {
-                    document.querySelectorAll('.hd_playertable').forEach(e => e.style.display = 'none');
+                    let bidding_box = document.getElementById('hd_bidding_box');
+                    bidding_box.style.display = 'block';
+                    let bid_step_elem = dojo.create('div', null, bidding_box);
+                    let ketchup_elem = dojo.create('div', null, bid_step_elem);
+                    dojo.place('<h1>Ketchup</h1>', ketchup_elem); // TODO translate
+                    ketchup_selector = this.format_block('jstpl_suit_selector', {'game_mode': 'ketchup'});
+                    dojo.place(ketchup_selector, ketchup_elem);
+                    ketchup_selector.querySelectorAll('li').forEach((node, index, arr) => {
+                        dojo.connect(node, 'onclick', this, 'onPickingToppings');
+                    });
+
+
+
+            let newElem = dojo.place(this.format_block('jstpl_strawman', {
+                x: spriteCoords.x,
+                y: spriteCoords.y,
+                player_id: player_id,
+                straw_num: straw_num,
+            }), elem);
+
+
                     document.getElementById('hd_rankSelector').style.display = (this.gamedatas.trumpRank == '0') ? 'inline-block' : 'none';
                     document.getElementById('hd_suitSelector').style.display = (this.gamedatas.trumpSuit == '0') ? 'inline-block' : 'none';
                     let elem = document.getElementById('hd_trump_rank');
@@ -423,7 +439,7 @@ function (dojo, declare) {
 
         setStrawmanPlayerLabel: function(player_info) {
             document.querySelector(`#hd_player_${player_info.id}_strawmen_wrap > h3`).innerHTML = dojo.string.substitute(
-                _("${player_name}'s strawmen"),
+                _("${player_name}'s plate"),
                 {player_name: `<span style="color:#${player_info.color}">${player_info.name}</span>`});
         },
 
@@ -509,31 +525,17 @@ function (dojo, declare) {
             });
         },
 
-        onChoosingTrump: function(event) {
-            if (!this.checkAction('selectTrump'))
+        onPickingToppings: function(event) {
+            if (!this.checkAction('pickToppings'))
                 return;
 
             let data = event.currentTarget.dataset;
-            this.ajaxAction('selectTrump', {
-                trump_type: data.type,
-                id: data.id,
+            this.ajaxAction('pickToppings', {
+                topping: data.mode,
+                suit: data.id,
                 lock : true
             });
         },
-
-        /*
-         * Example:
-         *
-         * onMyMethodToCall1: function(evt) { console.log('onMyMethodToCall1'); // Preventing default browser reaction dojo.stopEvent(
-         * evt); // Check that this action is possible (see 'possibleactions' in states.inc.php) if(! this.checkAction('myAction')) {
-         * return; }
-         *
-         * this.ajaxcall('/heartsla/heartsla/myAction.html', { lock: true, myArgument1: arg1, myArgument2: arg2, ... }, this, function(
-         * result) { // What to do after the server call if it succeeded // (most of the time: nothing) }, function(is_error) { // What to
-         * do after the server call in anyway (success or failure) // (most of the time: nothing) }); },
-         *
-         */
-
 
         ///////////////////////////////////////////////////
         //// Reaction to cometD notifications
