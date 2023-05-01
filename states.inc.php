@@ -56,17 +56,17 @@ define('STATE_NEW_HAND', 2);
 define('STATE_PICK_TOPPINGS', 3);
 define('STATE_NEXT_PLAYER_PICK_TOPPINGS', 4);
 define('STATE_NEXT_PLAYER_ADD_RELISH', 5);
-define('STATE_NEXT_PLAYER_ADD_RELISH_OR_SMOTHER', 5);
-define('STATE_ADD_RELISH', 6);
-define('STATE_ADD_RELISH_OR_SMOTHER', 7);
-define('STATE_FIRST_TRICK', 8);
-define('STATE_CHOOSE_WORKS_DIRECTION', 9);
-define('STATE_NEW_TRICK', 10);
-define('STATE_PLAYER_TURN_TRY_AUTOPLAY', 11);
-define('STATE_PLAYER_TURN', 12);
-define('STATE_NEXT_PLAYER', 13);
-define('STATE_REVEAL_STRAWMEN', 14);
-define('STATE_END_HAND', 15);
+define('STATE_NEXT_PLAYER_ADD_RELISH_OR_SMOTHER', 6);
+define('STATE_ADD_RELISH', 7);
+define('STATE_ADD_RELISH_OR_SMOTHER', 8);
+define('STATE_FIRST_TRICK', 9);
+define('STATE_CHOOSE_WORKS_DIRECTION', 10);
+define('STATE_NEW_TRICK', 11);
+define('STATE_PLAYER_TURN_TRY_AUTOPLAY', 12);
+define('STATE_PLAYER_TURN', 13);
+define('STATE_NEXT_PLAYER', 14);
+define('STATE_REVEAL_STRAWMEN', 15);
+define('STATE_END_HAND', 16);
 define('STATE_END_GAME', 99);
 }
 
@@ -164,7 +164,7 @@ $machinestates = [
         'action' => 'stFirstTrick',
         'transitions' => [
             'chooseWorksDirection' => STATE_CHOOSE_WORKS_DIRECTION,
-            'new_trick' => STATE_NEW_TRICK,
+            'newTrick' => STATE_NEW_TRICK,
         ]
     ],
 

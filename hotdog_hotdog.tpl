@@ -26,13 +26,13 @@
     </div>
 </div>
 
+<div id="hd_centerarea">
+
 <div id="hd_bidding_box" class="whiteblock">
 <h1>{BIDDING_PHASE}</h1>
 <div id="hd_bidding_history"></div>
 <div id="hd_bidding_current"></div>
 </div>
-
-<div id="hd_centerarea">
 
 <!-- BEGIN player -->
 <div id="hd_playertable_{PLAYER_ID}" class="hd_playertable whiteblock">
@@ -47,16 +47,20 @@
 </div>
 <!-- END player -->
 
-<div id="hd_trumpSelector" class="whiteblock">
-    <div>
+<div id="hd_gameinfo" class="whiteblock">
+    <div id="hd_trump_suit_container">
     <div>{TRUMP_SUIT}:</div>
     <div id="hd_trump_suit" class="hd_trump_indicator"></div>
     </div>
-    <br>
-    <div>
+    <div id="hd_special_rank_container">
     <div>{SPECIAL_RANK}:</div>
-    <div id="hd_trump_rank" class="hd_trump_indicator"></div>
+    <div id="hd_special_rank" class="hd_trump_indicator"></div>
     </div>
+	<div>
+    <div>{GAME_MODE}:</div>
+    <div id="hd_game_mode" class="hd_game_mode_name"></div>
+	</div>
+    <div id="hd_game_mode_direction"></div>
 </div>
 
 </div>

@@ -52,7 +52,7 @@
 }
 
 #hd_centerarea {
-    display: none; /* Usually flex */
+    display: flex;
     align-items: center;
     justify-content: center;
     flex-wrap: wrap;
@@ -73,15 +73,20 @@
     outline-offset: -2px;
 }
 
-#hd_gameInfo {
-    min-height: 130px;
+#hd_gameinfo {
     display: inline-block;
     vertical-align: middle;
 }
 
-#hd_gameInfo > div {
+#hd_gameinfo > div {
     display: flex;
     align-items: center
+}
+
+.hd_gameinfo div {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .hd_selector {
@@ -111,6 +116,11 @@
     text-align: center;
     line-height: 32px !important;
     background-size: 70%;
+}
+
+.hd_game_mode_name {
+    padding-left: 8px;
+    font-size: 30px;
 }
 
 .hd_playertablecard {

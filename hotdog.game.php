@@ -53,6 +53,12 @@ class Hotdog extends Table {
             'mustard' => clienttranslate('Mustard'),
             'the_works' => clienttranslate('The Works'),
         ];
+        $this->gameModeIds = [
+			0 => null,
+            1 => 'ketchup',
+            2 => 'mustard',
+            3 => 'the_works',
+        ];
     }
 
     protected function getGameName()
@@ -154,7 +160,7 @@ class Hotdog extends Table {
         $result['currentPicker'] = $this->getGameStateValue('currentPicker');
         $result['trumpSuit'] = $this->getGameStateValue('trumpSuit');
         $result['specialRank'] = $this->getGameStateValue('specialRank');
-        $result['gameMode'] = $this->getGameStateValue('gameMode');
+        $result['gameMode'] = $this->gameModeIds[$this->getGameStateValue('gameMode')];
         $result['rankDirection'] = $this->getGameStateValue('rankDirection');
 
         $won_tricks = $this->getWonTricks();
@@ -352,7 +358,7 @@ class Hotdog extends Table {
                 self::setGameStateValue('gameMode', 3);
                 self::setGameStateValue('currentPicker', 0);
                 $this->gamestate->nextState('firstTrick');
-                self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker. Playing with ${game_mode}'), [
+                self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker. Playing with ${game_mode_display}'), [
                     'i18n' => ['game_mode_display'],
                     'player_id' => $player_id,
                     'player_name' => $players[$player_id]['player_name'],
@@ -377,20 +383,21 @@ class Hotdog extends Table {
         
         if ($topping == 'the_works') {
             self::setGameStateValue('gameMode', 3);
-            self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode}'), [
+            self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode_display}'), [
                 'i18n' => ['game_mode_display'],
                 'player_id' => $player_id,
                 'player_name' => $players[$player_id]['player_name'],
                 'game_mode' => $topping,
                 'game_mode_display' => $this->gameModes[$topping],
             ]);
+            $this->gamestate->nextState('addRelish');
         } else {
             if ($topping == 'ketchup') {
                 self::setGameStateValue('gameMode', 1);
-                self::setGameStateInitialValue('rankDirection', 1);
+                self::setGameStateValue('rankDirection', 1);
             } else {
                 self::setGameStateValue('gameMode', 2);
-                self::setGameStateInitialValue('rankDirection', -1);
+                self::setGameStateValue('rankDirection', -1);
             }
             self::setGameStateValue('trumpSuit', $trump_suit);
             self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode_display} with ${suit} as trump'), [
@@ -402,18 +409,13 @@ class Hotdog extends Table {
                 'game_mode' => $topping,
                 'game_mode_display' => $this->gameModes[$topping],
             ]);
-        }
-
-        if ($topping == 'the_works') {
-            $this->gamestate->nextState('addRelish');
-        } else {
             $this->gamestate->nextState('addRelishOrSmother');
         }
     }
 
     function addRelish($option, $special_rank) {
         $player_id = self::getActivePlayerId();
-        $this->addRelishForPlayer($option, $special_rank);
+        $this->addRelishForPlayer($option, $special_rank, $player_id);
     }
 
     function addRelishForPlayer($option, $special_rank, $player_id) {
@@ -450,6 +452,33 @@ class Hotdog extends Table {
             ]);
             $this->gamestate->nextState('firstTrick');
         }
+    }
+
+    function chooseWorksDirection($option) {
+        $player_id = self::getActivePlayerId();
+        $this->chooseWorksDirectionForPlayer($option, $player_id);
+    }
+
+    function chooseWorksDirectionForPlayer($option, $player_id) {
+        self::checkAction('chooseWorksDirection');
+
+        $players = self::loadPlayersBasicInfos();
+
+		if ($option == 'ketchup')
+			$direction = 1;
+		else
+			$direction = -1;
+
+		$this->setGameStateValue('rankDirection', $direction);
+
+		self::notifyAllPlayers('worksDirection', clienttranslate('${player_name} selects ${game_mode_display} for the first trick'), [
+			'i18n' => ['game_mode_display'],
+			'player_id' => $player_id,
+			'player_name' => $players[$player_id]['player_name'],
+			'game_mode_display' => $this->gameModes['the_works'],
+			'direction' => $direction,
+		]);
+		$this->gamestate->nextState('');
     }
 
     function playCard($card_id) {
@@ -594,9 +623,11 @@ class Hotdog extends Table {
                 "WHERE player_id = $player_id");
         }
 
-		// TODO: Choose works direction
-
-        $this->gamestate->nextState();
+        if (self::getGameStateValue('gameMode') == 3) {
+            $this->gamestate->nextState('chooseWorksDirection');
+        } else {
+            $this->gamestate->nextState('newTrick');
+        }
     }
 
     function stNewTrick() {

@@ -68,6 +68,11 @@ function (dojo, declare) {
                 'the_works': _('The Works'),
             };
 
+            this.gameModeDescription = {
+                'ketchup': _('High cards are stronger'),
+                'mustard': _('Low cards are stronger'),
+            };
+
             // Set dynamic UI strings
             if (this.isSpectator) {
                 for (const player_info of Object.values(this.gamedatas.players)) {
@@ -135,13 +140,12 @@ function (dojo, declare) {
                 this.putCardOnTable(player_id, color, value, card.id);
             }
 
-            if (this.gamedatas.trumpRank != '0' || this.gamedatas.trumpSuit != '0') {
-                this.markTrumps();
-            }
+            this.markGameMode();
+            this.markTrumps();
 
-            let elem = document.getElementById('hd_trump_rank');
-            if (this.gamedatas.trumpRank != '0') {
-                elem.textContent = this.gamedatas.trumpRank;
+            let elem = document.getElementById('hd_special_rank');
+            if (this.gamedatas.specialRank != '0') {
+                elem.textContent = this.gamedatas.specialRank;
             } else {
                 elem.textContent = '?';
             }
@@ -225,6 +229,10 @@ function (dojo, declare) {
                 } else {
                     bidding_box.innerHTML = '';
                 }
+                break;
+
+            case 'firstTrick':
+                document.getElementById('hd_bidding_box').style.display = 'none';
                 break;
 
             // Mark playable cards
@@ -346,7 +354,7 @@ function (dojo, declare) {
 
         getCardSpriteXY: function(suit, rank) {
             let modifier = 0;
-            if (rank == this.gamedatas.trumpRank) {
+            if (rank == this.gamedatas.specialRank) {
                 modifier = 800;
             } else if (suit == this.gamedatas.trumpSuit) {
                 modifier = 400;
@@ -471,11 +479,74 @@ function (dojo, declare) {
                 {player_name: this.getPlayerNameHTML(player_info)});
         },
 
+        markGameMode: function() {
+            let elem = document.getElementById('hd_game_mode');
+            let elem2 = document.getElementById('hd_game_mode_direction');
+            if (!this.gamedatas.gameMode) {
+                elem.textContent = '?';
+                elem2.textContent = '';
+            } else {
+                elem.textContent = this.gameModes[this.gamedatas.gameMode];
+                if (this.gamedatas.gameMode == 'the_works') {
+                    this.markWorksDirection();
+                } else {
+                    elem2.textContent = this.gameModeDescription[this.gamedatas.gameMode];
+                }
+            }
+        },
+
+        markWorksDirection: function() {
+            let elem = document.getElementById('hd_game_mode_direction');
+            let prefix = _('Currently');
+            let description;
+            switch (this.gamedatas.rankDirection) {
+            case '0':
+                description = '?';
+                break;
+            case '1':
+                description = this.gameModeDescription['ketchup'];
+                break;
+            case '-1':
+                description = this.gameModeDescription['mustard'];
+                break;
+            }
+            elem.textContent = `${prefix}: ${description}`;
+        },
+
         // Change the graphics of the trump cards and reorder player hand
         markTrumps: function() {
+            let container = document.getElementById('hd_trump_suit_container');
+            if (this.gamedatas.gameMode == 'the_works') {
+                container.style.display = 'none';
+            } else {
+                let elem = document.getElementById('hd_trump_suit');
+                if (this.gamedatas.trumpSuit != '0') {
+                    elem.className = `hd_trump_indicator vid_suit_icon_${this.gamedatas.trumpSuit}`;
+                    elem.title = elem['aria-label'] = this.suitNames[this.gamedatas.trumpSuit];
+                } else {
+                    elem.textContent = '?';
+                    elem.removeAttribute('title');
+                    elem.className = 'vid_trump_indicator';
+                }
+                container.style.display = 'flex';
+            }
+
+            container = document.getElementById('hd_special_rank_container');
+            if (this.gamedatas.specialRank == -1) {
+                container.style.display = 'none';
+            } else {
+                let elem = document.getElementById('hd_special_rank');
+                if (this.gamedatas.specialRank != '0') {
+                    elem.textContent = this.gamedatas.specialRank;
+                } else {
+                    elem.textContent = '?';
+                }
+                container.style.display = 'flex';
+            }
+
             for (let [key, div_id] of Object.entries(this.visibleCards)) {
                 let [suit, rank] = key.split(',');
-                if (rank == this.gamedatas.trumpRank || suit == this.gamedatas.trumpSuit) {
+                if (rank == this.gamedatas.specialRank || suit == this.gamedatas.trumpSuit) {
                     let elem = document.getElementById(div_id);
                     if (elem) {
                         let coords = this.getCardSpriteXY(suit, rank);
@@ -484,22 +555,22 @@ function (dojo, declare) {
                 }
             }
 
-            let weights = {}
-            for (let suit = 1; suit <= 4; suit++) {
-                for (let rank = 1; rank <= 9; rank++) {
-                    // Build card type id
-                    let card_type_id = this.getCardUniqueId(suit, rank);
+            // let weights = {}
+            // for (let suit = 1; suit <= 4; suit++) {
+            //     for (let rank = 1; rank <= 9; rank++) {
+            //         // Build card type id
+            //         let card_type_id = this.getCardUniqueId(suit, rank);
 
-                    if (rank == this.gamedatas.trumpRank) {
-                        weights[card_type_id] = -1000 + card_type_id;
-                    } else if (suit == this.gamedatas.trumpSuit) {
-                        weights[card_type_id] = -100 + card_type_id;
-                    } else {
-                        weights[card_type_id] = card_type_id;
-                    }
-                }
-            }
-            this.playerHand.changeItemsWeight(weights);
+            //         if (rank == this.gamedatas.specialRank) {
+            //             weights[card_type_id] = -1000 + card_type_id;
+            //         } else if (suit == this.gamedatas.trumpSuit) {
+            //             weights[card_type_id] = -100 + card_type_id;
+            //         } else {
+            //             weights[card_type_id] = card_type_id;
+            //         }
+            //     }
+            // }
+            // this.playerHand.changeItemsWeight(weights);
         },
 
         // /////////////////////////////////////////////////
@@ -594,6 +665,7 @@ function (dojo, declare) {
             dojo.subscribe('newHandPublic', this, 'notif_newHandPublic');
             dojo.subscribe('selectGameMode', this, 'notif_selectGameMode');
             dojo.subscribe('addRelish', this, 'notif_addRelish');
+            dojo.subscribe('worksDirection', this, 'notif_worksDirection');
             dojo.subscribe('playCard', this, 'notif_playCard');
             this.notifqueue.setSynchronous('playCard', 1000);
             dojo.subscribe('revealStrawmen', this, 'notif_revealStrawmen');
@@ -605,12 +677,12 @@ function (dojo, declare) {
         },
 
         notif_newHandPublic: function(notif) {
-            document.getElementById('hd_trump_rank').textContent = '?';
+            document.getElementById('hd_special_rank').textContent = '?';
             let elem = document.getElementById('hd_trump_suit');
             elem.textContent = '?';
             elem.removeAttribute('title');
             elem.className = 'hd_trump_indicator';
-            this.gamedatas.trumpRank = '0';
+            this.gamedatas.specialRank = '0';
             this.gamedatas.trumpSuit = '0';
 
             // The spectator doesn't get the private newHand notification
@@ -651,12 +723,13 @@ function (dojo, declare) {
                 this.gamedatas.newPicker = new_picker;
             }
 
+            document.getElementById('hd_bidding_current').innerHTML = '';
             let bidding_history = document.getElementById('hd_bidding_history');
             let div = dojo.create('div', null, bidding_history);
             let player_html = this.getPlayerNameHTML(this.gamedatas.players[notif.args.player_id]);
             if (!game_mode) {
                 if (new_picker == 0) {
-                    this.gamedatas.gameMode = 3;
+                    this.gamedatas.gameMode = 'the_works';
                     div.innerHTML = dojo.string.substitute(_('Both players passed on being the Picker. Playing with {$game_mode}', {
                         game_mode: this.gameModes['the_works'],
                     }));
@@ -668,7 +741,7 @@ function (dojo, declare) {
                     }
                 }
             } else if (game_mode == 'the_works') {
-                this.gamedatas.gameMode = 3;
+                this.gamedatas.gameMode = game_mode;
                 if (this.isCurrentPlayerActive()) {
                     div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {game_mode: this.gameModes[game_mode]});
                 } else {
@@ -694,56 +767,31 @@ function (dojo, declare) {
 
             dojo.create('hr', null, bidding_history);
             if (game_mode == 'ketchup' || game_mode == 'mustard') {
-                this.gamedatas.gameMode = (game_mode == 'ketchup') ? 1 : 2;
+                this.gamedatas.gameMode = game_mode;
                 this.gamedatas.trumpSuit = notif.args.suit_id;
-                this.markTrumps();
             }
+            this.markGameMode();
+            this.markTrumps();
         },
 
         notif_addRelish: function(notif) {
             let option = notif.args.option;
 
-            let bidding_history = document.getElementById('hd_bidding_history');
-            let div = dojo.create('div', null, bidding_history);
-            if (option == 'pass') {
-            } else if (option == 'smother') {
+            document.getElementById('hd_bidding_current').innerHTML = '';
+            if (option == 'smother') {
+                this.gamedatas.gameMode = 'the_works';
+                this.gamedatas.trumpSuit = '0';
+            } else if (option == 'pass') {
+                this.gamedatas.specialRank = -1;
             } else {
+                this.gamedatas.specialRank = notif.rank;
             }
+            this.markTrumps();
+        },
 
-            if (this.isCurrentPlayerActive()) {
-                if (!game_mode) {
-                    div.innerHTML = _('You passed on being the Picker');
-                } else if (game_mode == 'the_works') {
-                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {game_mode: this.gameModes[game_mode]});
-                } else {
-                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode} with ${suit} as trump'), {
-                        game_mode: this.gameModes[game_mode],
-                        suit: this.getSuitDiv(notif.args.suit_id),
-                    });
-                }
-            } else {
-                let player_html = this.getPlayerNameHTML(this.gamedatas.players[notif.args.player_id]);
-                if (!game_mode) {
-                    div.innerHTML = dojo.string.substitute(_('${player_name} passed on being the Picker'), {player_name: player_html});
-                } else if (game_mode == 'the_works') {
-                    div.innerHTML = dojo.string.substitute(_('You selected ${game_mode}'), {
-                        game_mode: this.gameModes[game_mode],
-                        player_name: player_html,
-                    });
-                } else {
-                    div.innerHTML = dojo.string.substitute(_('${player_name} selected ${game_mode} with ${suit} as trump'), {
-                        game_mode: this.gameModes[game_mode],
-                        suit: this.getSuitDiv(notif.args.suit_id),
-                        player_name: player_html,
-                    });
-                }
-            }
-
-            dojo.create('hr', null, bidding_history);
-            if (game_mode == 'ketchup' || game_mode == 'mustard') {
-                this.gamedatas.trumpSuit = notif.args.suit_id;
-                this.markTrumps();
-            }
+        notif_worksDirection: function(notif) {
+            this.gamedatas.rankDirection = notif.args.rankDirection;
+            this.markWorksDirection();
         },
 
         notif_playCard: function(notif) {
