@@ -30,7 +30,6 @@
 
 <div id="hd_bidding_box" class="whiteblock">
 <h1>{BIDDING_PHASE}</h1>
-<div id="hd_bidding_history"></div>
 <div id="hd_bidding_current"></div>
 </div>
 
@@ -42,7 +41,7 @@
     <div class="hd_playertablecard" id="hd_playertablecard_{PLAYER_ID}"></div>
     <span class="hd_playertable_info">
         <span>{TRICKS_WON}: </span>
-        <span id="hd_score_pile_{PLAYER_ID}"></span>
+        <span id="hd_tricks_won_{PLAYER_ID}"></span>
     </span>
 </div>
 <!-- END player -->

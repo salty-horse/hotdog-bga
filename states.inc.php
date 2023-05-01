@@ -170,8 +170,8 @@ $machinestates = [
 
     STATE_CHOOSE_WORKS_DIRECTION => [
         'name' => 'chooseWorksDirection',
-        'description' => clienttranslate('${actplayer} must choose initial card ranking for The Works'),
-        'descriptionmyturn' => clienttranslate('${you} must choose initial card ranking for The Works'),
+        'description' => clienttranslate('${actplayer} must choose the initial card ranking for The Works'),
+        'descriptionmyturn' => clienttranslate('${you} must choose the initial card ranking for The Works'),
         'type' => 'activeplayer',
         'possibleactions' => ['chooseWorksDirection'],
         'transitions' => [
@@ -216,6 +216,8 @@ $machinestates = [
         'transitions' => [
             'nextPlayer' => STATE_PLAYER_TURN_TRY_AUTOPLAY,
             'revealStrawmen' => STATE_REVEAL_STRAWMEN,
+            'endHand' => STATE_END_HAND,
+            'endGame' => STATE_END_GAME,
         ]
     ],
 
@@ -225,8 +227,7 @@ $machinestates = [
         'type' => 'game',
         'action' => 'stRevealStrawmen',
         'transitions' => [
-            'nextTrick' => STATE_NEW_TRICK,
-            'endHand' => STATE_END_HAND,
+            '' => STATE_NEW_TRICK,
         ]
     ],
 

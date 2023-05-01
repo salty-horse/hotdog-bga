@@ -33,6 +33,7 @@ CREATE TABLE IF NOT EXISTS `card` (
 
 
 ALTER TABLE `player`
+    ADD `player_used_strawman` INT UNSIGNED NOT NULL DEFAULT '0',
     ADD `won_tricks` INT UNSIGNED NOT NULL DEFAULT '0',
     ADD `player_number_of_trumps_played` INT UNSIGNED NOT NULL DEFAULT '0',
     ADD `player_number_of_trumps_played_round` INT UNSIGNED NOT NULL DEFAULT '0',

@@ -33,15 +33,15 @@ class Hotdog extends Table {
         parent::__construct();
         self::initGameStateLabels([
             'roundNumber' => 10,
-            'trumpSuit' => 11,
-            'specialRank' => 12,
-            'ledSuit' => 13,
-            'gameMode' => 14,
-            'rankDirection' => 15,
-            'firstPlayer' => 16, // Non-dealer in game terms
-            'currentPicker' => 17,
-            'firstPickerPassed' => 18,
-            'secondPickerPassed' => 19,
+            'trickNumber' => 11,
+            'trumpSuit' => 12,
+            'specialRank' => 13,
+            'ledSuit' => 14,
+            'gameMode' => 15,
+            'rankDirection' => 16,
+            'firstPlayer' => 17, // Non-dealer in game terms
+            'currentPicker' => 18,
+            'firstPickerPassed' => 19,
             'footlongVariant' => 100,
         ]);
 
@@ -54,7 +54,7 @@ class Hotdog extends Table {
             'the_works' => clienttranslate('The Works'),
         ];
         $this->gameModeIds = [
-			0 => null,
+            0 => null,
             1 => 'ketchup',
             2 => 'mustard',
             3 => 'the_works',
@@ -103,10 +103,11 @@ class Hotdog extends Table {
 
         // Init global values with their initial values
 
+        self::setGameStateInitialValue('roundNumber', 0);
+        self::setGameStateInitialValue('trickNumber', 0);
         self::setGameStateInitialValue('trumpSuit', 0);
         self::setGameStateInitialValue('specialRank', 0);
         self::setGameStateInitialValue('firstPickerPassed', 0);
-        self::setGameStateInitialValue('secondPickerPassed', 0);
         self::setGameStateInitialValue('rankDirection', 0);
 
         // Create cards
@@ -156,12 +157,13 @@ class Hotdog extends Table {
         $result['cardsontable'] = $this->deck->getCardsInLocation('cardsontable');
 
         $result['roundNumber'] = $this->getGameStateValue('roundNumber');
+        $result['trickNumber'] = $this->getGameStateValue('trickNumber');
         $result['firstPlayer'] = $this->getGameStateValue('firstPlayer');
         $result['currentPicker'] = $this->getGameStateValue('currentPicker');
         $result['trumpSuit'] = $this->getGameStateValue('trumpSuit');
         $result['specialRank'] = $this->getGameStateValue('specialRank');
         $result['gameMode'] = $this->gameModeIds[$this->getGameStateValue('gameMode')];
-        $result['rankDirection'] = $this->getGameStateValue('rankDirection');
+        $result['rankDirection'] = intval($this->getGameStateValue('rankDirection'));
 
         $won_tricks = $this->getWonTricks();
 
@@ -246,8 +248,12 @@ class Hotdog extends Table {
             "card_location like 'straw_${player_id}_%'");
     }
 
-    function getCardStrength($card, $trump_suit, $led_suit) {
-        $value = 10 - $card['type_arg'];
+    function getCardStrength($card, $trump_suit, $led_suit, $rank_direction) {
+        if ($rank_direction == 1) {
+            $value = $card['type_arg'];
+        } else {
+            $value = 10 - $card['type_arg'];
+        }
         if ($card['type'] == $trump_suit) {
             $value += 100;
         }
@@ -283,25 +289,16 @@ class Hotdog extends Table {
             return $available_cards;
         }
 
-        // If this is a followed card, make sure it's in the led suit or a trump suit/rank.
-        // If not, make sure the player has no cards of the led suit.
-        $trump_rank = $this->getGameStateValue('specialRank');
-        $trump_suit = $this->getGameStateValue('trumpSuit');
-
         $cards_of_led_suit = [];
-        $cards_of_led_suit_and_trumps = [];
 
         foreach ($available_cards as $available_card_id => $card) {
             if ($card['type'] == $led_suit) {
                 $cards_of_led_suit[$card['id']] = $card;
-                $cards_of_led_suit_and_trumps[$card['id']] = $card;
-            } else if ($card['type'] == $trump_suit || $card['type_arg'] == $trump_rank) {
-                $cards_of_led_suit_and_trumps[$card['id']] = $card;
             }
         }
 
         if ($cards_of_led_suit) {
-            return $cards_of_led_suit_and_trumps;
+            return $cards_of_led_suit;
         } else {
             return $available_cards;
         }
@@ -354,10 +351,9 @@ class Hotdog extends Table {
         if ($topping == 'pass') {
             if (self::getGameStateValue('firstPickerPassed')) {
                 // Both players have passed. Play with The Works.
-                self::setGameStateValue('secondPickerPassed', 1);
                 self::setGameStateValue('gameMode', 3);
+                self::setGameStateValue('rankDirection', 0);
                 self::setGameStateValue('currentPicker', 0);
-                $this->gamestate->nextState('firstTrick');
                 self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker. Playing with ${game_mode_display}'), [
                     'i18n' => ['game_mode_display'],
                     'player_id' => $player_id,
@@ -366,23 +362,25 @@ class Hotdog extends Table {
                     'game_mode_display' => $this->gameModes['the_works'],
                     'new_picker' => 0,
                 ]);
+                $this->gamestate->nextState('firstTrick');
             } else {
                 // Opponent can pick toppings
                 $other_player = self::getPlayerAfter($player_id);
                 self::setGameStateValue('firstPickerPassed', 1);
                 self::setGameStateValue('currentPicker', $other_player);
-                $this->gamestate->nextState('pickToppings');
                 self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker'), [
                     'player_id' => $player_id,
                     'player_name' => $players[$player_id]['player_name'],
                     'new_picker' => $other_player,
                 ]);
+                $this->gamestate->nextState('pickToppings');
             }
             return;
         }
-        
+
         if ($topping == 'the_works') {
             self::setGameStateValue('gameMode', 3);
+            self::setGameStateValue('rankDirection', 0);
             self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode_display}'), [
                 'i18n' => ['game_mode_display'],
                 'player_id' => $player_id,
@@ -424,7 +422,6 @@ class Hotdog extends Table {
         $players = self::loadPlayersBasicInfos();
 
         if ($option == 'pass') {
-            $this->gamestate->nextState('firstTrick');
             self::notifyAllPlayers('addRelish', clienttranslate('${player_name} decided not adding relish'), [
                 'player_id' => $player_id,
                 'player_name' => $players[$player_id]['player_name'],
@@ -436,6 +433,7 @@ class Hotdog extends Table {
                 throw new BgaUserException(self::_('You cannot smother The Works'));
             }
             self::setGameStateValue('gameMode', 3);
+            self::setGameStateValue('rankDirection', 0);
             self::setGameStateValue('currentPicker', $player_id);
             self::notifyAllPlayers('addRelish', clienttranslate('${player_name} smothers and becomes the Picker'), [
                 'player_id' => $player_id,
@@ -464,21 +462,21 @@ class Hotdog extends Table {
 
         $players = self::loadPlayersBasicInfos();
 
-		if ($option == 'ketchup')
-			$direction = 1;
-		else
-			$direction = -1;
+        if ($option == 'ketchup')
+            $direction = 1;
+        else
+            $direction = -1;
 
-		$this->setGameStateValue('rankDirection', $direction);
+        $this->setGameStateValue('rankDirection', $direction);
 
-		self::notifyAllPlayers('worksDirection', clienttranslate('${player_name} selects ${game_mode_display} for the first trick'), [
-			'i18n' => ['game_mode_display'],
-			'player_id' => $player_id,
-			'player_name' => $players[$player_id]['player_name'],
-			'game_mode_display' => $this->gameModes['the_works'],
-			'direction' => $direction,
-		]);
-		$this->gamestate->nextState('');
+        self::notifyAllPlayers('worksDirection', clienttranslate('${player_name} selects ${game_mode_display} for the first trick'), [
+            'i18n' => ['game_mode_display'],
+            'player_id' => $player_id,
+            'player_name' => $players[$player_id]['player_name'],
+            'game_mode_display' => $this->gameModes[$option],
+            'direction' => $direction,
+        ]);
+        $this->gamestate->nextState();
     }
 
     function playCard($card_id) {
@@ -551,8 +549,12 @@ class Hotdog extends Table {
      */
     function stNewHand() {
         $this->incGameStateValue('roundNumber', 1);
+        self::setGameStateValue('trickNumber', 0);
+        self::setGameStateValue('gameMode', 0);
         self::setGameStateValue('trumpSuit', 0);
         self::setGameStateValue('specialRank', 0);
+        self::setGameStateValue('firstPickerPassed', 0);
+        self::setGameStateValue('rankDirection', 0);
 
         // Shuffle deck
         $this->deck->moveAllCardsInLocation(null, 'deck');
@@ -593,7 +595,13 @@ class Hotdog extends Table {
     }
 
     function stFirstTrick() {
-        $this->gamestate->changeActivePlayer($this->getGameStateValue('firstPlayer'));
+        // The Picker leads the first trick. If both players pass, the non-dealer leads the first trick.
+        $current_picker = self::getGameStateValue('currentPicker');
+        if ($current_picker) {
+            $this->gamestate->changeActivePlayer($current_picker);
+        } else {
+            $this->gamestate->changeActivePlayer(self::getGameStateValue('firstPlayer'));
+        }
 
         // Update hand statistics
         $trump_suit = $this->getGameStateValue('trumpSuit');
@@ -611,7 +619,7 @@ class Hotdog extends Table {
             $cards_of_player = $this->getAllPlayerCards($player_id);
             $strength = 0;
             foreach ($cards_of_player as $card) {
-                $strength += $this->getCardStrengthStatistic($card, $trump_suit, $trump_rank);
+                $strength += $this->getCardStrengthStatistic($card, $trump_suit, 0);
             }
 
             self::DbQuery(
@@ -623,7 +631,7 @@ class Hotdog extends Table {
                 "WHERE player_id = $player_id");
         }
 
-        if (self::getGameStateValue('gameMode') == 3) {
+        if (self::getGameStateValue('gameMode') == 3 && self::getGameStateValue('rankDirection') == 0) {
             $this->gamestate->nextState('chooseWorksDirection');
         } else {
             $this->gamestate->nextState('newTrick');
@@ -631,7 +639,16 @@ class Hotdog extends Table {
     }
 
     function stNewTrick() {
+        $current_trick = $this->incGameStateValue('trickNumber', 1);
         self::setGameStateValue('ledSuit', 0);
+        // Flip rank direction
+        if ($current_trick > 1 && self::getGameStateValue('gameMode') == 3) {
+            $new_direction = self::getGameStateValue('rankDirection') * -1;
+            self::setGameStateValue('rankDirection', $new_direction);
+            self::notifyAllPlayers('worksDirection','', [
+                'direction' => $new_direction,
+            ]);
+        }
         $this->gamestate->nextState();
     }
 
@@ -649,24 +666,27 @@ class Hotdog extends Table {
         $winning_player = null;
         $led_suit = self::getGameStateValue('ledSuit');
         $trump_suit = $this->getGameStateValue('trumpSuit');
-        $trump_rank = $this->getGameStateValue('specialRank');
+        $special_rank = $this->getGameStateValue('specialRank');
+        $rank_direction = $this->getGameStateValue('rankDirection');
 
-        // Trump rank is involved
-        if ($cards_on_table[0]['type_arg'] == $trump_rank || $cards_on_table[1]['type_arg'] == $trump_rank) {
-            // If both cards are trump rank, last played card wins.
-            if ($cards_on_table[0]['type_arg'] == $trump_rank && $cards_on_table[1]['type_arg'] == $trump_rank) {
+        // There's a special rank card, and suits are different
+        if (($cards_on_table[0]['type_arg'] == $special_rank || $cards_on_table[1]['type_arg'] == $special_rank) &&
+             $cards_on_table[0]['type'] != $cards_on_table[1]['type']) {
+            // If both cards are special rank, last played card wins.
+            if ($cards_on_table[0]['type_arg'] == $special_rank && $cards_on_table[1]['type_arg'] == $special_rank) {
                 $winning_player = $this->getActivePlayerId();
 
-            // Single trump rank wins.
-            } else if ($cards_on_table[0]['type_arg'] == $trump_rank) {
+            // Single special rank card wins.
+            } else if ($cards_on_table[0]['type_arg'] == $special_rank) {
                 $winning_player = $cards_on_table[0]['location_arg'];
             } else {
                 $winning_player = $cards_on_table[1]['location_arg'];
             }
         } else {
-            // Lowest value wins
-            $card_0_strength = $this->getCardStrength($cards_on_table[0], $trump_suit, $led_suit);
-            $card_1_strength = $this->getCardStrength($cards_on_table[1], $trump_suit, $led_suit);
+            // the highest-ranking card in the trump suit wins the trick
+            // or, if no trumps were played, the highest-ranking card in the suit that was led.
+            $card_0_strength = $this->getCardStrength($cards_on_table[0], $trump_suit, $led_suit, $rank_direction);
+            $card_1_strength = $this->getCardStrength($cards_on_table[1], $trump_suit, $led_suit, $rank_direction);
             if ($card_0_strength > $card_1_strength) {
                 $winning_player = $cards_on_table[0]['location_arg'];
             } else {
@@ -674,26 +694,53 @@ class Hotdog extends Table {
             }
         }
 
+        self::DbQuery("UPDATE player SET won_tricks = won_tricks+1 WHERE player_id='$winning_player'");
+
         $this->gamestate->changeActivePlayer($winning_player);
 
-        // Move all cards to the winner's scorepile
-        $this->deck->moveAllCardsInLocation('cardsontable', 'scorepile', null, $winning_player);
+        // Discard all cards
+        $this->deck->moveAllCardsInLocation('cardsontable', 'deck');
 
         // Note: we use 2 notifications to pause the display during the first notification
         // before cards are collected by the winner
         $players = self::loadPlayersBasicInfos();
         $points = $cards_on_table[0]['type_arg'] + $cards_on_table[1]['type_arg'];
-        self::notifyAllPlayers('trickWin', clienttranslate('${player_name} wins the trick and ${points} points'), [
+        self::notifyAllPlayers('trickWin', clienttranslate('${player_name} wins the trick'), [
             'player_id' => $winning_player,
             'player_name' => $players[$winning_player]['player_name'],
-            'points' => $points,
         ]);
         self::notifyAllPlayers('giveAllCardsToPlayer','', [
             'player_id' => $winning_player,
-            'points' => $points,
         ]);
 
-        $this->gamestate->nextState('revealStrawmen');
+        // Check if instant victory was reached
+        $instant_victory = false;
+        $won_tricks = self::getUniqueValueFromDB("SELECT won_tricks FROM player WHERE player_id='$winning_player'");
+        $current_picker = self::getGameStateValue('currentPicker', $first_picker);
+        if ($current_picker == 0 || $current_picker == $winning_player) {
+            if ($won_tricks = 15) {
+                $instant_victory = true;
+            }
+        } else if ($won_tricks = 12) {
+            $instant_victory = true;
+        }
+
+        if ($instant_victory) {
+            // TODO increase points to 5
+            // TODO notification
+            $this->gamestate->nextState('endGame');
+            return;
+        }
+
+        // Check if the hand is over
+        $remaining_card_count = self::getUniqueValueFromDB('select count(*) from card where card_location = "hand" or card_location like "straw%"');
+        if ($remaining_card_count == 0) {
+            // End of the hand
+            $this->gamestate->nextState('endHand');
+        } else {
+            // End of the trick
+            $this->gamestate->nextState('revealStrawmen');
+        }
     }
 
     function stPlayerTurnTryAutoplay() {
@@ -731,14 +778,7 @@ class Hotdog extends Table {
             self::DbQuery('UPDATE player SET player_used_strawman = 0');
         }
 
-        $remaining_card_count = self::getUniqueValueFromDB('select count(*) from card where card_location = "hand" or card_location like "straw%"');
-        if ($remaining_card_count == 0) {
-            // End of the hand
-            $this->gamestate->nextState('endHand');
-        } else {
-            // End of the trick
-            $this->gamestate->nextState('nextTrick');
-        }
+        $this->gamestate->nextState();
     }
 
     function stEndHand() {
@@ -765,7 +805,7 @@ class Hotdog extends Table {
                 'suit' => $this->getSuitLogName($gift_card['type']),
             ]);
 
-            $this->incStat($score_pile['won_tricks'], 'won_tricks', $player_id);
+            // $this->incStat(1, 'won_tricks', $player_id); // TODO: Use a different stat?
 
             // This stores the total score minus gift cards, used for calculating average_points_per_trick
             self::DbQuery(
@@ -882,25 +922,10 @@ class Hotdog extends Table {
         }
 
         // Alternate first player
-        self::setGameStateValue('firstPlayer', 
-            self::getPlayerAfter(self::getGameStateValue('firstPlayer')));
-
-        // Choose new first picker
-        if ($flat_scores[0] == $flat_scores[1]) {
-            // Rare case when players are tied: Alternate first picker
-            $first_picker = self::getPlayerAfter(self::getGameStateValue('currentPicker'));
-        } else {
-            // First picker is the player with the lower score
-            if ($flat_scores[0] < $flat_scores[1]) {
-                $player_with_lowest_score = array_keys($new_scores)[0];
-            } else {
-                $player_with_lowest_score = array_keys($new_scores)[1];
-            }
-            $first_picker = $player_with_lowest_score;
-        }
-
-        self::setGameStateValue('currentPicker', $first_picker);
-        $this->gamestate->changeActivePlayer($first_picker);
+        $new_first_player = self::getPlayerAfter(self::getGameStateValue('firstPlayer'));
+        self::setGameStateValue('firstPlayer', $new_first_player);
+        self::setGameStateValue('currentPicker', $new_first_player);
+        $this->gamestate->changeActivePlayer($new_first_player);
         $this->gamestate->nextState('nextHand');
     }
 
