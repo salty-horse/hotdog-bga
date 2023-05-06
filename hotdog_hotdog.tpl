@@ -85,8 +85,6 @@
 
 // Javascript HTML templates
 
-var jstpl_cardontable = '<div class="hd_cardontable" id="hd_cardontable_${player_id}" style="background-position:-${x}% -${y}%"></div>';
-var jstpl_strawman = '<div class="hd_strawcard" id="hd_straw_${player_id}_${straw_num}" style="background-position:-${x}% -${y}%"></div>';
 var jstpl_player_hand_size = '<div class="hd_hand_size">\
     <span id="hd_player_hand_size_${id}">0</span>\
     <span class="fa fa-hand-paper-o"/>\

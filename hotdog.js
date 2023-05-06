@@ -88,6 +88,8 @@ function (dojo, declare) {
             this.playerHand.centerItems = true;
             this.playerHand.create(this, $('hd_myhand'), this.cardWidth, this.cardHeight);
             this.playerHand.image_items_per_row = 9;
+            this.playerHand.onItemCreate = dojo.hitch(this, this.setupNewCard);
+            this.playerHand.jstpl_stock_item = '<div id="${id}" class="hd_card"></div>';
 
             dojo.connect(this.playerHand, 'onChangeSelection', this, 'onPlayerHandSelectionChanged');
 
@@ -96,7 +98,7 @@ function (dojo, declare) {
                 for (let rank = 1; rank <= 9; rank++) {
                     // Build card type id
                     let card_type_id = this.getCardUniqueId(suit, rank);
-                    this.playerHand.addItemType(card_type_id, card_type_id, g_gamethemeurl + 'img/cards.png', card_type_id);
+                    this.playerHand.addItemType(card_type_id, card_type_id);
                 }
             }
 
@@ -321,6 +323,24 @@ function (dojo, declare) {
             this.ajaxcall(`/hotdog/hotdog/${action}.html`, args, this, func, err);
         },
 
+        populateCardElement: function(card_div, suit, rank) {
+            dojo.place('<div class="hd_card_crown">&nbsp</div>', card_div);
+            dojo.place(`<div class="hd_card_underline hd_suit_color_${suit}">&nbsp</div>`, card_div);
+            dojo.place(`<div class="hd_card_main"><div class="hd_card_rank hd_suit_color_${suit}">${rank}</div><div class="hd_card_suit hd_card_suit_${suit}">&nbsp;</div></div>`, card_div);
+
+            if (suit == this.gamedatas.trumpSuit) {
+                card_div.classList.add('hd_card_trump');
+            }
+            if (rank == this.gamedatas.specialRank) {
+                card_div.classList.add('hd_card_special_rank');
+            }
+        },
+
+        setupNewCard: function(card_div, card_type_id, card_id) {
+            let [suit, rank] = this.getCardInfoById(card_type_id);
+            this.populateCardElement(card_div, suit, rank);
+        },
+
         /** Override this function to inject html for log items  */
 
         /* @Override */
@@ -354,17 +374,11 @@ function (dojo, declare) {
             return (suit - 1) * 9 + (rank - 1);
         },
 
-        getCardSpriteXY: function(suit, rank) {
-            let modifier = 0;
-            if (rank == this.gamedatas.specialRank) {
-                modifier = 800;
-            } else if (suit == this.gamedatas.trumpSuit) {
-                modifier = 400;
-            }
-            return {
-                x: 100 * (rank - 1),
-                y: 100 * (suit - 1) + modifier,
-            }
+        getCardInfoById: function(card_id) {
+            return [
+                Math.floor(card_id / 9) + 1,
+                card_id % 9 + 1,
+            ];
         },
 
         initPlayerHand: function(card_list) {
@@ -380,41 +394,38 @@ function (dojo, declare) {
         initStrawmen: function(player_id, visible_strawmen, more_strawmen) {
             for (const [ix, straw] of visible_strawmen.entries()) {
                 if (!straw) continue;
-                this.setStrawman(player_id, ix + 1, straw.type, straw.type_arg, straw.id);
-                this.visibleCards[`${straw.type},${straw.type_arg}`] = `hd_straw_${player_id}_${ix + 1}`;
                 if (!more_strawmen || more_strawmen[ix]) {
                     let more = document.createElement('div');
                     more.className = 'hd_straw_more';
-                    document.getElementById(`hd_straw_${player_id}_${ix+1}`).parentNode.appendChild(more);
+                    document.getElementById(`hd_playerstraw_${player_id}_${ix+1}`).prepend(more);
                 }
+                this.setStrawman(player_id, ix + 1, straw.type, straw.type_arg, straw.id);
+                this.visibleCards[`${straw.type},${straw.type_arg}`] = `hd_straw_${player_id}_${ix + 1}`;
             }
         },
 
         setStrawman: function(player_id, straw_num, suit, rank, card_id) {
-            let spriteCoords = this.getCardSpriteXY(suit, rank);
             let elem = document.getElementById(`hd_playerstraw_${player_id}_${straw_num}`);
-            let newElem = dojo.place(this.format_block('jstpl_strawman', {
-                x: spriteCoords.x,
-                y: spriteCoords.y,
-                player_id: player_id,
-                straw_num: straw_num,
-            }), elem);
-            newElem.dataset.card_id = card_id;
-            this.strawmenById[card_id] = newElem;
+            let cardElem = dojo.create('div', {
+                id: `hd_straw_${player_id}_${straw_num}`,
+                class: 'hd_card',
+            }, elem);
+            this.populateCardElement(cardElem, suit, rank);
+            cardElem.dataset.card_id = card_id;
+            this.strawmenById[card_id] = cardElem;
             if (player_id == this.player_id) {
-                dojo.connect(newElem, 'onclick', this, 'onChoosingStrawman');
+                dojo.connect(cardElem, 'onclick', this, 'onChoosingStrawman');
             }
-            return newElem;
+            return cardElem;
         },
 
         putCardOnTable: function(player_id, suit, rank, card_id) {
             let cardInHand = false;
-            let spriteCoords = this.getCardSpriteXY(suit, rank);
-            let placedCard = dojo.place(this.format_block('jstpl_cardontable', {
-                x : spriteCoords.x,
-                y : spriteCoords.y,
-                player_id : player_id
-            }), 'hd_playertablecard_' + player_id);
+            let placedCard = dojo.create('div', {
+                id: 'hd_cardontable_' + player_id,
+                class: 'hd_card hd_cardontable',
+            }, 'hd_playertablecard_' + player_id);
+            this.populateCardElement(placedCard, suit, rank);
             placedCard.dataset.card_id = card_id;
         },
 
@@ -547,33 +558,33 @@ function (dojo, declare) {
                 container.style.display = 'flex';
             }
 
+            // Mark trumps and special ranks
             for (let [key, div_id] of Object.entries(this.visibleCards)) {
                 let [suit, rank] = key.split(',');
-                if (rank == this.gamedatas.specialRank || suit == this.gamedatas.trumpSuit) {
-                    let elem = document.getElementById(div_id);
-                    if (elem) {
-                        let coords = this.getCardSpriteXY(suit, rank);
-                        elem.style['background-position'] = `-${coords.x}% -${coords.y}%`;
-                    }
+                let elem = document.getElementById(div_id);
+                if (suit == this.gamedatas.trumpSuit) {
+                    elem.classList.add('hd_card_trump');
+                } else {
+                    elem.classList.remove('hd_card_trump');
+                }
+                if (rank == this.gamedatas.specialRank) {
+                    elem.classList.add('hd_card_special_rank');
                 }
             }
 
-            // let weights = {}
-            // for (let suit = 1; suit <= 4; suit++) {
-            //     for (let rank = 1; rank <= 9; rank++) {
-            //         // Build card type id
-            //         let card_type_id = this.getCardUniqueId(suit, rank);
-
-            //         if (rank == this.gamedatas.specialRank) {
-            //             weights[card_type_id] = -1000 + card_type_id;
-            //         } else if (suit == this.gamedatas.trumpSuit) {
-            //             weights[card_type_id] = -100 + card_type_id;
-            //         } else {
-            //             weights[card_type_id] = card_type_id;
-            //         }
-            //     }
-            // }
-            // this.playerHand.changeItemsWeight(weights);
+            // Change card order in hand
+            let weights = {}
+            for (let suit = 1; suit <= 4; suit++) {
+                for (let rank = 1; rank <= 9; rank++) {
+                    let card_type_id = this.getCardUniqueId(suit, rank);
+                    if (suit == this.gamedatas.trumpSuit) {
+                        weights[card_type_id] = -100 + card_type_id;
+                    } else {
+                        weights[card_type_id] = card_type_id;
+                    }
+                }
+            }
+            this.playerHand.changeItemsWeight(weights);
         },
 
         // /////////////////////////////////////////////////

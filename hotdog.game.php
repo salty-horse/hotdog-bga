@@ -352,6 +352,7 @@ class Hotdog extends Table {
             if (self::getGameStateValue('firstPickerPassed')) {
                 // Both players have passed. Play with The Works.
                 self::setGameStateValue('gameMode', 3);
+                self::setGameStateValue('trumpSuit', 0);
                 self::setGameStateValue('rankDirection', 0);
                 self::setGameStateValue('currentPicker', 0);
                 self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} passes on being the Picker. Playing with ${game_mode_display}'), [
@@ -380,6 +381,7 @@ class Hotdog extends Table {
 
         if ($topping == 'the_works') {
             self::setGameStateValue('gameMode', 3);
+            self::setGameStateValue('trumpSuit', 0);
             self::setGameStateValue('rankDirection', 0);
             self::notifyAllPlayers('selectGameMode', clienttranslate('${player_name} selects ${game_mode_display}'), [
                 'i18n' => ['game_mode_display'],
@@ -433,6 +435,7 @@ class Hotdog extends Table {
                 throw new BgaUserException(self::_('You cannot smother The Works'));
             }
             self::setGameStateValue('gameMode', 3);
+            self::setGameStateValue('trumpSuit', 0);
             self::setGameStateValue('rankDirection', 0);
             self::setGameStateValue('currentPicker', $player_id);
             self::notifyAllPlayers('addRelish', clienttranslate('${player_name} smothers and becomes the Picker'), [
