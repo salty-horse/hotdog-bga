@@ -716,12 +716,12 @@ class Hotdog extends Table {
         // Check if instant victory was reached
         $instant_victory = false;
         $won_tricks = self::getUniqueValueFromDB("SELECT won_tricks FROM player WHERE player_id='$winning_player'");
-        $current_picker = self::getGameStateValue('currentPicker', $first_picker);
+        $current_picker = self::getGameStateValue('currentPicker');
         if ($current_picker == 0 || $current_picker == $winning_player) {
-            if ($won_tricks = 15) {
+            if ($won_tricks == 15) {
                 $instant_victory = true;
             }
-        } else if ($won_tricks = 12) {
+        } else if ($won_tricks == 12) {
             $instant_victory = true;
         }
 

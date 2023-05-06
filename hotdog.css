@@ -137,6 +137,15 @@
     width: auto;
 }
 
+.hd_strawmen_wrap {
+	max-width: 550px;
+	margin: 10px auto;
+}
+
+.hd_strawmen {
+    text-align: center;
+}
+
 .hd_straw {
     display: inline-block;
     position: relative;
@@ -172,6 +181,11 @@
     left: -2px;
     border-radius: 25%;
     box-shadow: 1px 1px 1px 1px black;
+}
+
+#hd_myhand_wrap {
+    max-width: 800px;
+    margin: 10px auto;
 }
 
 .spectatorMode #hd_myhand_wrap {

@@ -15,9 +15,9 @@
 
 -->
 
-<div id="hd_player_{TOP_PLAYER_ID}_strawmen_wrap" class="whiteblock">
+<div id="hd_player_{TOP_PLAYER_ID}_strawmen_wrap" class="whiteblock hd_strawmen_wrap">
     <h3>Opponent's plate</h3>
-    <div>
+    <div class="hd_strawmen">
         <div class="hd_straw" id="hd_playerstraw_{TOP_PLAYER_ID}_1"></div>
         <div class="hd_straw" id="hd_playerstraw_{TOP_PLAYER_ID}_2"></div>
         <div class="hd_straw" id="hd_playerstraw_{TOP_PLAYER_ID}_3"></div>
@@ -55,18 +55,18 @@
     <div>{SPECIAL_RANK}:</div>
     <div id="hd_special_rank" class="hd_trump_indicator"></div>
     </div>
-	<div>
+    <div>
     <div>{GAME_MODE}:</div>
     <div id="hd_game_mode" class="hd_game_mode_name"></div>
-	</div>
+    </div>
     <div id="hd_game_mode_direction"></div>
 </div>
 
 </div>
 
-<div id="hd_player_{BOTTOM_PLAYER_ID}_strawmen_wrap" class="whiteblock">
+<div id="hd_player_{BOTTOM_PLAYER_ID}_strawmen_wrap" class="whiteblock hd_strawmen_wrap">
     <h3>{MY_STRAWMEN}</h3>
-    <div id="hd_mystrawmen">
+    <div id="hd_mystrawmen" class="hd_strawmen">
         <div class="hd_straw" id="hd_playerstraw_{BOTTOM_PLAYER_ID}_1"></div>
         <div class="hd_straw" id="hd_playerstraw_{BOTTOM_PLAYER_ID}_2"></div>
         <div class="hd_straw" id="hd_playerstraw_{BOTTOM_PLAYER_ID}_3"></div>

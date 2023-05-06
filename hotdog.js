@@ -85,6 +85,7 @@ function (dojo, declare) {
             // Player hand
             this.playerHand = new ebg.stock();
             this.playerHand.setSelectionMode(1);
+            this.playerHand.centerItems = true;
             this.playerHand.create(this, $('hd_myhand'), this.cardWidth, this.cardHeight);
             this.playerHand.image_items_per_row = 9;
 
