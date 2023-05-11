@@ -245,7 +245,7 @@
     font-family: 'Stint Ultra Condensed';
     font-style: normal;
     font-weight: 400;
-    src: local('Stint Ultra Condensed'), url('https://fonts.cdnfonts.com/s/15352/StintUltraCondensed-Regular.woff') format('woff');
+    src: local('Stint Ultra Condensed'), url('https://fonts.googleapis.com/css?family=Stint+Ultra+Condensed') format('woff');
 }
 
 .hd_card_crown {
