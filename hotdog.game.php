@@ -205,15 +205,22 @@ class Hotdog extends Table {
     //////////////////////////////////////////////////////////////////////////////
     //////////// Utilities
     ////////////
-    // TODO: Use single sql query
     function getPlayerStrawmen($player_id) {
         $visible_strawmen = [];
         $hidden_strawmen = [];
+        $used_pile = self::getUniqueValueFromDB(
+            "SELECT player_used_strawman FROM player WHERE player_id = ${player_id} AND player_used_strawman > 0");
+
         for ($i = 1; $i <= 5; $i++) {
             $straw_cards = array_values($this->deck->getCardsInLocation("straw_{$player_id}_{$i}"));
             if (count($straw_cards) >= 1) {
-                array_push($visible_strawmen, $this->getTopStraw($straw_cards));
-                array_push($hidden_strawmen, count($straw_cards) == 2);
+                if ($i != $used_pile) {
+                    array_push($visible_strawmen, $this->getTopStraw($straw_cards));
+                    array_push($hidden_strawmen, count($straw_cards) == 2);
+                } else {
+                    array_push($visible_strawmen, null);
+                    array_push($hidden_strawmen, true);
+                }
             } else {
                 array_push($visible_strawmen, null);
                 array_push($hidden_strawmen, false);

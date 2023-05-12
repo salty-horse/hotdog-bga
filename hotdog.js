@@ -393,14 +393,15 @@ function (dojo, declare) {
 
         initStrawmen: function(player_id, visible_strawmen, more_strawmen) {
             for (const [ix, straw] of visible_strawmen.entries()) {
-                if (!straw) continue;
                 if (!more_strawmen || more_strawmen[ix]) {
                     let more = document.createElement('div');
                     more.className = 'hd_straw_more';
                     document.getElementById(`hd_playerstraw_${player_id}_${ix+1}`).prepend(more);
                 }
-                this.setStrawman(player_id, ix + 1, straw.type, straw.type_arg, straw.id);
-                this.visibleCards[`${straw.type},${straw.type_arg}`] = `hd_straw_${player_id}_${ix + 1}`;
+                if (straw) {
+                    this.setStrawman(player_id, ix + 1, straw.type, straw.type_arg, straw.id);
+                    this.visibleCards[`${straw.type},${straw.type_arg}`] = `hd_straw_${player_id}_${ix + 1}`;
+                }
             }
         },
 
